@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+Use shadcn/ui components consistently: Button, Card, Input, Select, Dialog, Table, Badge
+Implement responsive design with Tailwind CSS using mobile-first approach
+Create reusable components: QRCodeGenerator, ProductCard, OrdersList, CategoryTabs
+Use proper TypeScript interfaces for all props and data structures
+Follow shadcn naming conventions and use cn() utility for conditional classes

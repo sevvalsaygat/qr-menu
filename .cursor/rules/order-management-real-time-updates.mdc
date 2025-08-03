@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+Implement shopping cart functionality using React Context or Zustand for state management
+Create order submission without payment integration - store orders with status: 'pending', 'confirmed', 'completed'
+Use real-time Firestore listeners in dashboard to show live order updates
+Structure order data: tableId, items[], totalAmount, status, timestamp, restaurantId
+Implement order status management for restaurant owners
