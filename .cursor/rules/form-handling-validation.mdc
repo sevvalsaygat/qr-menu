@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+Use React Hook Form with Zod schema validation for all forms
+Create reusable form components with shadcn/ui Form components
+Implement proper form schemas in /lib/schemas.js for sign-up, product creation, category creation
+Use useForm() with resolver: zodResolver(schema) pattern consistently
+Handle form submission with loading states and proper error/success feedback

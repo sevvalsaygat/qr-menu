@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+Generate QR codes using qrcode library pointing to /menu/[tableId] URLs
+Store table data with fields: id, name, restaurantId, qrCode, isActive
+Implement QR code regeneration functionality for tables
+Create table management interface with add/edit/delete operations
+Ensure QR codes are downloadable/printable for restaurant owners

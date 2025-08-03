@@ -1,0 +1,966 @@
+---
+alwaysApply: true
+---
+1. Executive Summary
+1.1 Product Overview
+QR-Menu SaaS is a cloud-based restaurant management platform that enables contactless ordering through QR code technology. Restaurant owners can create digital menus, manage orders in real-time, and provide seamless customer experiences without payment processing integration.
+1.2 Key Value Propositions
+
+For Restaurants: Reduce operational costs, improve order accuracy, real-time menu management
+For Customers: Contactless ordering, faster service, clear menu information
+For Business: Scalable SaaS model with recurring revenue
+
+1.3 Success Metrics
+
+Restaurant retention rate: >85%
+Order processing time reduction: 40%
+Customer satisfaction score: >4.5/5
+Platform uptime: 99.9%
+
+
+2. Product Vision & Goals
+2.1 Vision Statement
+"To become the leading contactless ordering solution that transforms restaurant operations and enhances dining experiences globally."
+2.2 Primary Goals
+
+Operational Efficiency: Streamline restaurant order management
+Customer Experience: Provide intuitive, fast ordering process
+Business Growth: Scale to 1000+ restaurants within 12 months
+Technology Leadership: Pioneer QR-based ordering innovations
+
+2.3 Key Objectives
+
+Reduce average order time from 8 minutes to 3 minutes
+Eliminate 95% of order transcription errors
+Achieve 40% cost reduction in menu management
+Enable real-time inventory updates
+
+
+3. User Personas & Market Analysis
+3.1 Primary Persona: Restaurant Owner/Manager
+Demographics:
+
+Age: 25-55 years
+Role: Small to medium restaurant owners, managers
+Tech Savvy: Basic to intermediate
+Business Size: 5-50 tables
+
+Pain Points:
+
+Manual order taking leads to errors
+High menu printing and updating costs
+Difficulty tracking orders during peak hours
+Staff training overhead for new menu items
+Customer complaints about slow service
+
+Goals:
+
+Increase operational efficiency
+Reduce costs and errors
+Improve customer satisfaction
+Better order tracking and analytics
+
+User Stories:
+
+"As a restaurant owner, I want to update my menu instantly so customers see current prices and availability"
+"As a manager, I need to track all orders in real-time so I can optimize kitchen workflow"
+
+3.2 Secondary Persona: Restaurant Customer
+Demographics:
+
+Age: 18-65 years
+Tech Comfort: Basic smartphone usage
+Dining Frequency: 2-4 times per week
+Device: Smartphone primary, tablet secondary
+
+Pain Points:
+
+Long wait times for service
+Unclear menu descriptions
+Difficulty getting server attention
+Language barriers with staff
+Hygiene concerns with physical menus
+
+Goals:
+
+Quick and easy ordering
+Clear product information
+Contactless experience
+Accurate order placement
+
+User Stories:
+
+"As a customer, I want to scan a QR code and immediately see the menu so I can order quickly"
+"As a diner, I need clear product descriptions and prices so I can make informed choices"
+
+3.3 Market Analysis
+Target Market Size:
+
+Primary: 650,000+ restaurants in target regions
+Addressable: Small to medium restaurants (2-50 tables)
+Initial Focus: Urban areas with high smartphone penetration
+
+Competitive Landscape:
+
+Direct Competitors: QR menu solutions, digital ordering platforms
+Indirect Competitors: Traditional POS systems, food delivery apps
+Differentiation: Focus on simplicity, no payment integration, real-time management
+
+
+4. Core Product Concepts
+4.1 System Architecture Concept
+Multi-Tenant SaaS Architecture:
+
+Each restaurant operates as an isolated tenant
+Shared infrastructure with data segregation
+Scalable real-time database operations
+Mobile-first responsive design
+
+4.2 QR Code System Concept
+Table-Specific QR Codes:
+
+Each table generates unique QR code
+QR codes link to table-specific menu URLs
+Dynamic QR generation and regeneration capability
+Downloadable/printable QR codes for physical placement
+
+4.3 Order Management Concept
+Three-Stage Order Lifecycle:
+
+Pending: Customer submitted, awaiting restaurant acknowledgment
+Confirmed: Restaurant acknowledged, order in preparation
+Completed: Order served and finished
+
+4.4 Menu Management Concept
+Hierarchical Menu Structure:
+
+Categories: Logical groupings (Appetizers, Mains, Desserts)
+Products: Individual menu items with details
+Availability: Real-time stock status management
+Pricing: Dynamic pricing with currency support
+
+4.5 Real-Time Communication Concept
+Event-Driven Updates:
+
+New orders trigger instant notifications
+Menu changes reflect immediately on customer interfaces
+Order status updates sync across all connected devices
+Offline-first approach with synchronization on reconnection
+
+
+5. Detailed Feature Specifications
+5.1 Authentication & User Management
+5.1.1 Restaurant Owner Registration
+Requirements:
+
+Email validation (RFC 5322 compliant)
+Password strength requirements (min 8 chars, 1 uppercase, 1 number, 1 special)
+Restaurant/Company name (2-100 characters)
+Email verification before account activation
+CAPTCHA protection against automated signups
+
+Business Rules:
+
+One account per email address
+Restaurant name must be unique within the system
+Account remains inactive until email verification
+Failed verification attempts expire after 24 hours
+
+Acceptance Criteria:
+gherkinGiven a new restaurant owner
+When they provide valid email, password, and restaurant name
+Then account is created in pending state
+And verification email is sent
+And user cannot access dashboard until verified
+5.1.2 Restaurant Owner Authentication
+Requirements:
+
+Email/password login
+"Remember me" functionality (30-day session)
+Password reset via email
+Account lockout after 5 failed attempts
+Session management with automatic logout
+
+Security Features:
+
+JWT tokens with refresh mechanism
+Rate limiting on login attempts
+Secure password reset tokens (expire in 1 hour)
+Session invalidation on password change
+
+5.2 Dashboard & Restaurant Management
+5.2.1 Dashboard Overview
+Key Metrics Display:
+
+Total active tables
+Pending orders count
+Today's order volume
+Revenue summary (order totals)
+Popular items analytics
+
+Quick Actions:
+
+Create new table
+Add product
+View recent orders
+Access table QR codes
+
+Real-Time Updates:
+
+Live order notifications
+Order status changes
+New customer activity alerts
+
+5.2.2 Table Management System
+Table Creation:
+
+Table name/number (required, 1-20 characters)
+Optional description (max 100 characters)
+Automatic QR code generation
+Table status (Active/Inactive)
+
+QR Code Features:
+
+Unique URL format: /menu/{restaurantId}/{tableId}
+SVG and PNG format options
+Printable PDF generation
+QR code regeneration capability
+Custom size options (2x2 to 6x6 inches)
+
+Table Operations:
+
+Edit table information
+Toggle active/inactive status
+Delete table (with confirmation)
+View table usage analytics
+Bulk QR code download
+
+Business Rules:
+
+Table names must be unique within restaurant
+Cannot delete table with pending orders
+Inactive tables show "closed" message to customers
+QR codes remain valid even when regenerated
+
+5.3 Menu Management System
+5.3.1 Category Management
+Category Properties:
+
+Name (required, 2-50 characters)
+Description (optional, max 200 characters)
+Display order (numeric sorting)
+Visibility toggle (show/hide)
+Category image (optional)
+
+Category Operations:
+
+Create, read, update, delete (CRUD)
+Drag-and-drop reordering
+Bulk category import/export
+Category-wise product count display
+
+Business Rules:
+
+Minimum 1 category required
+Cannot delete category with active products
+Category names must be unique per restaurant
+Display order automatically assigned if not specified
+
+5.3.2 Product Management
+Product Properties:
+
+Name (required, 2-100 characters)
+Description (optional, max 500 characters)
+Price (required, decimal precision to 2 places)
+Category assignment (required)
+Product image (optional, max 5MB)
+Availability status (In Stock/Out of Stock)
+Featured item toggle
+
+Image Management:
+
+Supported formats: JPG, PNG, WebP
+Automatic image optimization
+Thumbnail generation
+Image cropping interface
+Alt text for accessibility
+
+Product Operations:
+
+CRUD operations with validation
+Bulk price updates
+Product import via CSV
+Duplicate product functionality
+Product search and filtering
+
+Business Rules:
+
+Price must be positive number
+Each product must belong to exactly one category
+Out of stock items shown as unavailable to customers
+Product images automatically compressed for web delivery
+
+5.4 Order Management System
+5.4.1 Order Processing Flow
+Order States:
+
+Pending: New order from customer
+Confirmed: Restaurant acknowledged order
+Completed: Order fulfilled and served
+
+Order Information:
+
+Order ID (auto-generated, 8-digit)
+Table information
+Timestamp (order placement time)
+Items list with quantities and prices
+Total amount calculation
+Customer name (optional)
+Special instructions
+Order status history
+
+Real-Time Features:
+
+Instant order notifications (visual + audio)
+Live order status updates
+Order queue management
+Estimated preparation time tracking
+
+5.4.2 Order Dashboard Interface
+Order Display:
+
+Card-based order layout
+Color-coded status indicators
+Order age timestamps
+Quick action buttons
+Expandable order details
+
+Filtering & Search:
+
+Filter by status (Pending/Confirmed/Completed)
+Filter by table
+Date range filtering
+Search by order ID or customer name
+Sort by time, amount, or status
+
+Bulk Operations:
+
+Mark multiple orders as confirmed
+Bulk status updates
+Export selected orders
+Print order summaries
+
+5.5 Customer Interface (QR Menu)
+5.5.1 Menu Display System
+Layout Structure:
+
+Header with restaurant name
+Category navigation (horizontal tabs)
+Product grid/list view
+Floating cart indicator
+Footer with basic information
+
+Product Card Design:
+
+Product image (with fallback)
+Product name and description
+Price display with currency
+Add to cart button
+Out of stock indicators
+Dietary restriction icons
+
+Responsive Design:
+
+Mobile-first approach
+Touch-friendly interactions
+Optimized for small screens
+Tablet and desktop compatibility
+
+5.5.2 Shopping Cart System
+Cart Functionality:
+
+Add items with quantity selection
+Modify quantities in cart
+Remove items from cart
+Cart persistence during session
+Cart summary with total calculation
+
+Cart Interface:
+
+Slide-out cart drawer
+Item list with images and details
+Quantity adjustment controls
+Remove item functionality
+Price calculations with tax display
+
+Local Storage:
+
+Cart data persisted locally
+Automatic cart recovery on page refresh
+Cart expiration after 24 hours
+Cross-tab synchronization
+
+5.5.3 Order Placement Process
+Order Review:
+
+Complete cart summary
+Table confirmation display
+Special instructions input
+Customer name (optional)
+Terms and conditions acknowledgment
+
+Order Submission:
+
+Order validation before submission
+Loading states during processing
+Error handling and retry mechanism
+Order confirmation display
+Order number generation
+
+Post-Order Experience:
+
+Order confirmation screen
+Estimated wait time display
+Order tracking information
+Option to place additional orders
+
+
+6. User Experience Flows
+6.1 Restaurant Owner Onboarding Flow
+mermaidgraph TD
+    A[Landing Page] --> B[Sign Up Button]
+    B --> C[Registration Form]
+    C --> D{Form Valid?}
+    D -->|No| C
+    D -->|Yes| E[Account Created]
+    E --> F[Email Verification Sent]
+    F --> G[Check Email]
+    G --> H[Click Verification Link]
+    H --> I[Account Activated]
+    I --> J[Login Dashboard]
+    J --> K[Welcome Tour]
+    K --> L[Create First Table]
+    L --> M[Create First Category]
+    M --> N[Add First Product]
+    N --> O[Download QR Codes]
+    O --> P[Setup Complete]
+Detailed Steps:
+
+Landing Page Access: User visits platform homepage
+Registration Initiation: Click "Sign Up for Restaurant"
+Form Completion: Enter email, password, restaurant name
+Validation: Client-side and server-side validation
+Account Creation: Account created in pending state
+Email Verification: Automated email with verification link
+Email Confirmation: User clicks link, account activated
+First Login: Redirect to dashboard with welcome message
+Guided Setup: Interactive tour of main features
+Table Creation: Create first table with QR code
+Menu Setup: Add categories and initial products
+QR Code Download: Download and print table QR codes
+Go Live: Restaurant ready to accept orders
+
+6.2 Daily Restaurant Operations Flow
+mermaidgraph TD
+    A[Restaurant Opens] --> B[Login to Dashboard]
+    B --> C[Check Overnight Orders]
+    C --> D[Update Menu Availability]
+    D --> E[Monitor Real-Time Orders]
+    E --> F{New Order?}
+    F -->|Yes| G[Review Order Details]
+    F -->|No| E
+    G --> H[Confirm Order]
+    H --> I[Prepare Order]
+    I --> J[Mark as Completed]
+    J --> E
+    E --> K{End of Day?}
+    K -->|No| E
+    K -->|Yes| L[Review Daily Report]
+    L --> M[Update Tomorrow's Menu]
+    M --> N[Logout]
+Daily Workflow Details:
+
+Morning Setup: Login and review overnight activity
+Menu Updates: Adjust availability based on inventory
+Order Monitoring: Watch real-time order stream
+Order Processing: Acknowledge, prepare, and complete orders
+Inventory Management: Update item availability throughout day
+End-of-Day: Review performance and prepare for tomorrow
+
+6.3 Customer Ordering Flow
+mermaidgraph TD
+    A[Scan QR Code] --> B{Valid Table?}
+    B -->|No| C[Error Message]
+    B -->|Yes| D[Load Menu]
+    D --> E[Browse Categories]
+    E --> F[View Products]
+    F --> G{Add to Cart?}
+    G -->|No| F
+    G -->|Yes| H[Select Quantity]
+    H --> I[Add to Cart]
+    I --> J{Continue Shopping?}
+    J -->|Yes| E
+    J -->|No| K[Review Cart]
+    K --> L[Add Special Instructions]
+    L --> M[Enter Customer Name]
+    M --> N[Submit Order]
+    N --> O[Order Confirmation]
+    O --> P[Wait for Preparation]
+Customer Journey Details:
+
+QR Scanning: Use smartphone camera to scan table QR code
+Menu Access: Automatic redirect to table-specific menu
+Product Discovery: Browse categories and view product details
+Cart Management: Add items, adjust quantities, review selections
+Order Customization: Add special instructions or preferences
+Order Submission: Final review and order placement
+Confirmation: Receive order number and estimated time
+Order Tracking: Monitor order status (optional feature)
+
+6.4 Order Lifecycle Flow
+mermaidsequenceDiagram
+    participant C as Customer
+    participant S as System
+    participant R as Restaurant
+    participant K as Kitchen
+
+    C->>S: Submit Order
+    S->>S: Validate Order
+    S->>R: Send Order Notification
+    S->>C: Order Confirmation
+    R->>S: Acknowledge Order
+    S->>C: Order Confirmed
+    R->>K: Send to Kitchen
+    K->>K: Prepare Order
+    R->>S: Mark as Completed
+    S->>C: Order Ready (Optional)
+Order Processing Steps:
+
+Order Placement: Customer submits complete order
+System Validation: Verify order details and table validity
+Restaurant Notification: Real-time alert to restaurant dashboard
+Customer Confirmation: Order number and details sent to customer
+Restaurant Acknowledgment: Staff confirms order receipt
+Kitchen Preparation: Order sent to kitchen workflow
+Order Completion: Staff marks order as served
+Customer Notification: Optional completion alert
+
+6.5 Error Handling Flows
+6.5.1 Invalid QR Code Flow
+mermaidgraph TD
+    A[Scan QR Code] --> B{Table Exists?}
+    B -->|No| C[Show Error Message]
+    C --> D[Suggest Contact Restaurant]
+    D --> E[Provide Support Link]
+    
+    B -->|Yes| F{Table Active?}
+    F -->|No| G[Show Closed Message]
+    G --> H[Display Restaurant Hours]
+    
+    F -->|Yes| I[Load Menu Successfully]
+6.5.2 Order Submission Error Flow
+mermaidgraph TD
+    A[Submit Order] --> B{Network Available?}
+    B -->|No| C[Show Offline Message]
+    C --> D[Queue Order Locally]
+    D --> E[Retry When Online]
+    
+    B -->|Yes| F{Server Available?}
+    F -->|No| G[Show Service Error]
+    G --> H[Offer Retry Option]
+    
+    F -->|Yes| I{Order Valid?}
+    I -->|No| J[Show Validation Errors]
+    I -->|Yes| K[Order Processed]
+
+7. Technical Architecture
+7.1 System Architecture Overview
+Architecture Pattern: Serverless, Event-Driven, Multi-Tenant SaaS
+Deployment Model: Cloud-native with auto-scaling capabilities
+Database Strategy: NoSQL document-based with real-time synchronization
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Client Apps   │    │   Web Dashboard │    │  Customer Menu  │
+│   (Mobile/Web)  │    │   (Restaurant)  │    │    (QR Code)    │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────┴───────────┐
+                    │     API Gateway         │
+                    │   (Authentication &     │
+                    │    Request Routing)     │
+                    └─────────────┬───────────┘
+                                 │
+                    ┌─────────────┴───────────┐
+                    │   Business Logic Layer  │
+                    │  (Next.js API Routes)   │
+                    └─────────────┬───────────┘
+                                 │
+         ┌───────────────────────┼───────────────────────┐
+         │                       │                       │
+┌────────┴─────────┐   ┌─────────┴────────┐    ┌────────┴────────┐
+│   Authentication │   │    Database      │    │   File Storage  │
+│   (Firebase Auth)│   │ (Firestore)      │    │ (Firebase Store)│
+└──────────────────┘   └──────────────────┘    └─────────────────┘
+7.2 Database Schema Design
+7.2.1 Core Collections Structure
+Users Collection (/users/{userId})
+json{
+  "userId": "string (auto-generated)",
+  "email": "string (unique, indexed)",
+  "restaurantName": "string",
+  "createdAt": "timestamp",
+  "lastLoginAt": "timestamp",
+  "isActive": "boolean",
+  "subscription": {
+    "plan": "string",
+    "status": "string",
+    "expiresAt": "timestamp"
+  },
+  "profile": {
+    "firstName": "string",
+    "lastName": "string",
+    "phone": "string",
+    "address": "object"
+  }
+}
+Restaurants Collection (/restaurants/{restaurantId})
+json{
+  "restaurantId": "string (auto-generated)",
+  "ownerId": "string (reference to users)",
+  "name": "string",
+  "description": "string",
+  "address": "object",
+  "contactInfo": "object",
+  "settings": {
+    "currency": "string",
+    "timezone": "string",
+    "operatingHours": "object",
+    "isActive": "boolean"
+  },
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+Tables Collection (/restaurants/{restaurantId}/tables/{tableId})
+json{
+  "tableId": "string (auto-generated)",
+  "restaurantId": "string",
+  "name": "string",
+  "description": "string",
+  "qrCode": "string (base64 or URL)",
+  "qrCodeUrl": "string",
+  "isActive": "boolean",
+  "position": "object",
+  "capacity": "number",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+Categories Collection (/restaurants/{restaurantId}/categories/{categoryId})
+json{
+  "categoryId": "string (auto-generated)",
+  "restaurantId": "string",
+  "name": "string",
+  "description": "string",
+  "displayOrder": "number",
+  "imageUrl": "string",
+  "isVisible": "boolean",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+Products Collection (/restaurants/{restaurantId}/products/{productId})
+json{
+  "productId": "string (auto-generated)",
+  "restaurantId": "string",
+  "categoryId": "string",
+  "name": "string",
+  "description": "string",
+  "price": "number",
+  "imageUrl": "string",
+  "images": ["string array"],
+  "isAvailable": "boolean",
+  "isFeatured": "boolean",
+  "allergens": ["string array"],
+  "nutritionalInfo": "object",
+  "preparationTime": "number (minutes)",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+Orders Collection (/restaurants/{restaurantId}/orders/{orderId})
+json{
+  "orderId": "string (auto-generated)",
+  "restaurantId": "string",
+  "tableId": "string",
+  "tableName": "string",
+  "items": [
+    {
+      "productId": "string",
+      "name": "string",
+      "price": "number",
+      "quantity": "number",
+      "subtotal": "number",
+      "specialInstructions": "string"
+    }
+  ],
+  "summary": {
+    "subtotal": "number",
+    "tax": "number",
+    "total": "number",
+    "itemCount": "number"
+  },
+  "customer": {
+    "name": "string",
+    "phone": "string (optional)"
+  },
+  "status": "string (pending|confirmed|preparing|ready|completed|cancelled)",
+  "statusHistory": [
+    {
+      "status": "string",
+      "timestamp": "timestamp",
+      "notes": "string"
+    }
+  ],
+  "specialInstructions": "string",
+  "estimatedTime": "number (minutes)",
+  "createdAt": "timestamp",
+  "updatedAt": "timestamp"
+}
+7.2.2 Database Indexes & Queries
+Required Indexes:
+javascript// Users collection
+users.createIndex({ email: 1 }, { unique: true })
+users.createIndex({ createdAt: -1 })
+
+// Restaurants collection
+restaurants.createIndex({ ownerId: 1 })
+restaurants.createIndex({ "settings.isActive": 1 })
+
+// Tables collection
+tables.createIndex({ restaurantId: 1 })
+tables.createIndex({ restaurantId: 1, isActive: 1 })
+
+// Products collection
+products.createIndex({ restaurantId: 1, categoryId: 1 })
+products.createIndex({ restaurantId: 1, isAvailable: 1 })
+
+// Orders collection
+orders.createIndex({ restaurantId: 1, createdAt: -1 })
+orders.createIndex({ restaurantId: 1, status: 1 })
+orders.createIndex({ tableId: 1, createdAt: -1 })
+Common Query Patterns:
+javascript// Get active tables for restaurant
+db.collection('restaurants/{restaurantId}/tables')
+  .where('isActive', '==', true)
+  .orderBy('name')
+
+// Get available products by category
+db.collection('restaurants/{restaurantId}/products')
+  .where('categoryId', '==', categoryId)
+  .where('isAvailable', '==', true)
+  .orderBy('name')
+
+// Get pending orders for restaurant
+db.collection('restaurants/{restaurantId}/orders')
+  .where('status', '==', 'pending')
+  .orderBy('createdAt', 'desc')
+  .limit(50)
+
+// Real-time order updates
+db.collection('restaurants/{restaurantId}/orders')
+  .where('status', 'in', ['pending', 'confirmed', 'preparing'])
+  .onSnapshot(callback)
+7.3 Technology Stack Specifications
+7.3.1 Frontend Stack
+Core Framework:
+
+Next.js 14+: React framework with App Router
+TypeScript: Static typing for better code quality
+Tailwind CSS: Utility-first CSS framework
+shadcn/ui: Pre-built component library
+
+State Management:
+
+React Context: Global app state
+Zustand: Client-side cart state
+React Query/SWR: Server state management
+
+Form Handling:
+
+React Hook Form: Form state management
+Zod: Schema validation
+Hookform Resolvers: Integration layer
+
+Additional Libraries:
+json{
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "typescript": "^5.0.0",
+    "tailwindcss": "^3.0.0",
+    "@radix-ui/react-*": "latest",
+    "react-hook-form": "^7.0.0",
+    "zod": "^3.0.0",
+    "qrcode": "^1.5.0",
+    "date-fns": "^2.29.0",
+    "lucide-react": "^0.263.0",
+    "recharts": "^2.8.0"
+  }
+}
+7.3.2 Backend & Infrastructure
+Firebase Services:
+
+Authentication: User management and session handling
+Firestore: NoSQL database with real-time capabilities
+Storage: File uploads and media management
+Functions: Serverless backend logic (optional)
+Hosting: Static site hosting and CDN
+
+Development Tools:
+
+Firebase Emulator: Local development environment
+Firebase CLI: Deployment and management
+Firestore Rules: Database security configuration
+
+7.3.3 Development Environment
+Code Quality:
+
+ESLint: Code linting and style enforcement
+Prettier: Code formatting
+Husky: Git hooks for pre-commit checks
+Commitlint: Commit message standards
+
+Testing Framework:
+
+Jest: Unit testing
+React Testing Library: Component testing
+Cypress: End-to-end testing
+Firebase Testing: Database rule testing
+
+7.4 Security Architecture
+7.4.1 Authentication Security
+Firebase Authentication Features:
+
+Email/password authentication
+Session management with JWT tokens
+Account lockout policies
+Password strength requirements
+Email verification mandatory
+
+Custom Security Rules:
+javascript// Firestore Security Rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Restaurant data access control
+    match /restaurants/{restaurantId} {
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      
+      // Nested collections inherit parent permissions
+      match /{document=**} {
+        allow read, write: if request.auth != null && 
+          get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+      }
+    }
+    
+    // Public read access for customer menu
+    match /restaurants/{restaurantId}/products/{productId} {
+      allow read: if resource.data.isAvailable == true;
+    }
+    
+    match /restaurants/{restaurantId}/categories/{categoryId} {
+      allow read: if resource.data.isVisible == true;
+    }
+  }
+}
+7.4.2 Data Protection
+Encryption:
+
+HTTPS/TLS 1.3 for all communications
+Firebase automatic encryption at rest
+Client-side sensitive data hashing
+
+Privacy Measures:
+
+Minimal customer data collection
+Data anonymization where possible
+GDPR compliance features
+Right to deletion implementation
+
+7.5 Performance Optimization
+7.5.1 Frontend Performance
+Code Splitting:
+
+Route-based code splitting with Next.js
+Dynamic imports for heavy components
+Lazy loading for images and non-critical resources
+
+Caching Strategy:
+
+Static asset caching (1 year)
+API response caching (5-60 minutes)
+Service worker for offline functionality
+Browser storage for cart persistence
+
+Image Optimization:
+
+Next.js Image component usage
+WebP format conversion
+Responsive image sizing
+CDN delivery via Firebase Storage
+
+7.5.2 Database Performance
+Query Optimization:
+
+Composite indexes for complex queries
+Pagination for large datasets
+Real-time listener optimization
+Query result caching
+
+Data Structure Optimization:
+
+Denormalization for read-heavy operations
+Subcollection usage for related data
+Batch operations for bulk updates
+Connection pooling and limiting
+
+
+8. Business Rules & Restrictions
+8.1 Core Business Rules
+8.1.1 Account & Restaurant Management
+Registration Rules:
+
+One restaurant account per email address
+Restaurant names must be unique within the platform
+Email verification required before dashboard access
+Account creation rate limited to 5 attempts per IP per hour
+
+Subscription Rules:
+
+Free trial period: 14 days with full features
+Maximum 10 tables during trial period
+Subscription required for continued service after trial
+Grace period: 7 days after subscription expiration
+
+Data Ownership:
+
+Restaurant owners have full control over their data
+Data export available at any time
+Account deletion removes all associated data after 30 days
+Data backup retention for 90 days post-deletion
+
+8.1.2 Menu & Product Management
+Category Rules:
+
+Minimum 1 category required per restaurant
+Maximum 20 categories per restaurant
+Category names must be unique within restaurant
+Cannot delete category containing active products
+
+Product Rules:
+
+Maximum 200 products

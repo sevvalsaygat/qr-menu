@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+Implement global error boundaries using Next.js error.tsx files
+Use React Query or SWR for data fetching with caching and background updates
+Implement proper loading states using Suspense and loading.tsx files
+Add proper error handling for Firebase operations with user-friendly error messages
+Optimize images using Next.js Image component and implement lazy loading for product images
+Use dynamic imports for heavy components and implement code splitting where appropriate

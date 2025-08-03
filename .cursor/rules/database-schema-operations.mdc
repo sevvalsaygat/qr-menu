@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+Structure Firestore collections as: /users/{uid}, /restaurants/{restaurantId}, /tables/{tableId}, /categories/{categoryId}, /products/{productId}, /orders/{orderId}
+Use compound queries and proper indexing for efficient data retrieval
+Implement real-time listeners for orders dashboard using onSnapshot()
+Create reusable database functions in /lib/firestore.js with proper error handling and TypeScript types
+Use subcollections for related data (e.g., /restaurants/{id}/tables, /restaurants/{id}/categories)

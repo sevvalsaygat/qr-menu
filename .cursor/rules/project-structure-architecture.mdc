@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+Use Next.js 14+ with App Router for the application structure
+Organize components in /components with subdirectories: /ui (shadcn components), /forms, /dashboard, /customer
+Place Firebase configuration in /lib/firebase.js and database operations in /lib/firestore.js
+Use /app/(auth) route group for sign-in/sign-up pages and /app/dashboard for restaurant owner pages
+Create /app/menu/[tableId] dynamic route for customer QR code scanning
+Follow Next.js 14 conventions: use page.tsx, layout.tsx, and loading.tsx files appropriately
