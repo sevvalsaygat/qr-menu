@@ -28,7 +28,6 @@ export interface AuthContextType {
   loading: boolean
   error: string | null
   isAuthenticated: boolean
-  isEmailVerified: boolean
 }
 
 // Restaurant types

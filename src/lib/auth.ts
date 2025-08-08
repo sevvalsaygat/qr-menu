@@ -3,7 +3,6 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendEmailVerification,
   sendPasswordResetEmail,
   updateProfile,
   User
@@ -22,16 +21,13 @@ export const signUp = async (
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
     const user = userCredential.user
     
-    // Send email verification
-    await sendEmailVerification(user)
-    
     // Create user document in Firestore
     const userData: Partial<UserData> = {
       email: user.email!,
       restaurantName,
       createdAt: serverTimestamp(),
-      isActive: false, // Will be activated after email verification
-      emailVerified: false
+      isActive: true,
+      emailVerified: true
     }
     
     await setDoc(doc(db, 'users', user.uid), userData)
@@ -55,14 +51,6 @@ export const signIn = async (
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
     const user = userCredential.user
-    
-    // Check if email is verified
-    if (!user.emailVerified) {
-      return { 
-        success: false, 
-        error: 'Please verify your email before signing in' 
-      }
-    }
     
     // Update last login time
     await setDoc(doc(db, 'users', user.uid), {
@@ -177,20 +165,4 @@ export const updateUserProfile = async (
   }
 }
 
-// Resend email verification
-export const resendEmailVerification = async (): Promise<ApiResponse> => {
-  try {
-    if (!auth.currentUser) {
-      return { success: false, error: 'No user logged in' }
-    }
-    
-    await sendEmailVerification(auth.currentUser)
-    return { success: true }
-  } catch (error: unknown) {
-    console.error('Error resending verification email:', error)
-    return { 
-      success: false, 
-      error: 'Failed to resend verification email' 
-    }
-  }
-}
+
