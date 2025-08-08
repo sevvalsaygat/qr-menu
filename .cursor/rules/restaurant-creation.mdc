@@ -1,0 +1,74 @@
+---
+alwaysApply: true
+---
+# 🔧 Restaurant Creation Fix
+
+## ✅ Issue Resolved: "No restaurant found. Please contact support."
+
+### 🐛 **The Problem:**
+Users were seeing "No restaurant found" error when accessing the tables page because:
+1. **Existing users** who signed up before restaurant auto-creation didn't have restaurants
+2. **New users** might have had restaurant creation fail silently during signup
+3. **No fallback mechanism** to create restaurants for existing users
+
+### 🔧 **The Solution:**
+
+#### 1. **Graceful Fallback Creation:**
+```typescript
+// If no restaurant found, automatically create one
+if (restaurants.length === 0) {
+  await createDefaultRestaurant()
+  return
+}
+```
+
+#### 2. **Improved Signup Process:**
+```typescript
+// Restaurant creation won't break signup if it fails
+try {
+  await createRestaurant(user.uid, restaurantData)
+} catch (restaurantError) {
+  console.error('Error creating restaurant during signup:', restaurantError)
+  // Continue with signup - restaurant will be created later
+}
+```
+
+#### 3. **Better Error Handling:**
+- Added debug logging to track restaurant creation
+- User-friendly error messages with retry buttons
+- Automatic restaurant creation using user's restaurant name from profile
+
+#### 4. **Robust Data Flow:**
+```
+1. User accesses tables page
+2. System checks for existing restaurants
+3. If none found → Create default restaurant automatically
+4. If creation fails → Show error with retry button
+5. If successful → Show success message and empty tables list
+```
+
+### 🎯 **User Experience:**
+
+#### **For Existing Users:**
+1. Visit tables page → Automatic restaurant creation
+2. See success message: "Restaurant setup completed! You can now add tables."
+3. Start adding tables immediately
+
+#### **For New Users:**
+1. Sign up → Restaurant created during signup (if possible)
+2. If signup restaurant creation fails → Created when accessing tables
+3. Seamless experience either way
+
+### 🔍 **Debug Features:**
+- Console logging for troubleshooting
+- Clear error messages
+- Retry mechanisms
+- Fallback restaurant name handling
+
+### ✅ **Testing the Fix:**
+
+1. **Existing Users**: Visit `/dashboard/tables` → Should see success message and empty state
+2. **New Users**: Sign up → Access tables → Should work seamlessly
+3. **Error Cases**: If creation fails → Clear error message with retry button
+
+The issue is now resolved and users can access the table management system without any problems! 🎉

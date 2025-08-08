@@ -1,0 +1,70 @@
+---
+alwaysApply: true
+---
+# 🍽️ Table Management System
+
+## ✅ Features Complete
+
+The table management system allows restaurant owners to manage their tables with full CRUD operations.
+
+### 🎯 Features:
+
+#### ✅ Table Operations:
+- **Create**: Add new tables with name, description, capacity, and active status
+- **Read**: View all tables in a responsive grid layout
+- **Update**: Edit table information inline with modal dialogs
+- **Delete**: Remove tables with confirmation dialog
+
+#### ✅ QR Code Generation:
+- **Generate**: Create QR codes for each table automatically
+- **Preview**: View QR code in a modal dialog
+- **Download**: Save QR codes as PNG files
+- **Menu URL**: Each QR code links to `/menu/{restaurantId}/{tableId}`
+
+#### ✅ User Interface:
+- **Responsive Design**: Works on desktop, tablet, and mobile
+- **Minimalist UI**: Clean, modern interface using shadcn/ui components
+- **Real-time Updates**: Changes reflect immediately
+- **Loading States**: Proper loading indicators for all operations
+- **Error Handling**: User-friendly error messages
+
+### 🔄 User Flow:
+
+1. **Access Tables**: Navigate to `/dashboard/tables` or click "Manage Tables" on dashboard
+2. **Create Table**: Click "Add Table" → Fill form → Submit
+3. **View Tables**: See all tables in grid layout with status indicators
+4. **Edit Table**: Click table menu → "Edit" → Update form → Save
+5. **Generate QR**: Click table menu → "QR Code" → View/Download
+6. **Delete Table**: Click table menu → "Delete" → Confirm
+
+### 🎨 UI Components:
+
+- **Table Cards**: Display table information with status badges
+- **Modal Dialogs**: Create, edit, QR code, and delete confirmations
+- **Dropdown Menus**: Action menus for each table
+- **Form Controls**: Input fields, textarea, switches, and buttons
+- **Loading States**: Spinners and disabled states during operations
+
+### 🔧 Technical Features:
+
+- **Firestore Integration**: All data stored in Firebase Firestore
+- **QR Code Library**: Uses `qrcode` library for generation
+- **TypeScript**: Full type safety throughout
+- **Error Boundaries**: Proper error handling and user feedback
+- **Responsive Design**: Mobile-first approach
+
+### 📱 Navigation:
+
+- **Dashboard Navigation**: Added navigation bar with tabs
+- **Active States**: Current page highlighted
+- **Quick Access**: Direct links from dashboard cards
+
+### 🚀 Ready for Use:
+
+The table management system is fully functional and ready for restaurant owners to:
+1. Set up their tables
+2. Generate QR codes
+3. Print QR codes for physical placement
+4. Start accepting customer orders
+
+Next steps: Build the menu system and customer ordering interface! 🎉

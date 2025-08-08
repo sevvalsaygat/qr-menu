@@ -10,6 +10,7 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { UserData, ApiResponse } from '../types'
+import { createRestaurant } from './firestore'
 
 // Sign up with email and password
 export const signUp = async (
@@ -31,6 +32,23 @@ export const signUp = async (
     }
     
     await setDoc(doc(db, 'users', user.uid), userData)
+    
+    // Create default restaurant
+    try {
+      await createRestaurant(user.uid, {
+        name: restaurantName,
+        description: `Welcome to ${restaurantName}`,
+        settings: {
+          currency: 'USD',
+          timezone: 'America/New_York',
+          isActive: true
+        }
+      })
+    } catch (restaurantError) {
+      console.error('Error creating restaurant during signup:', restaurantError)
+      // Continue with signup even if restaurant creation fails
+      // The restaurant will be created later when user accesses tables
+    }
     
     return { success: true, data: { user } }
   } catch (error: unknown) {
