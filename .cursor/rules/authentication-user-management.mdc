@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+Implement Firebase Authentication with email/password using /lib/auth.js
+Create custom hooks: useAuth() for authentication state and useRequireAuth() for protected routes
+Store additional user data (company name, restaurant details) in Firestore /users/{uid} collection
+Use middleware.ts to protect dashboard routes and redirect unauthenticated users
+Implement proper error handling for authentication flows with user-friendly messages
