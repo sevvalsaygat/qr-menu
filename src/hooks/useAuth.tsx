@@ -55,8 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     userData,
     loading,
     error,
-    isAuthenticated: !!user,
-    isEmailVerified: user?.emailVerified || false
+    isAuthenticated: !!user
   }
 
   return (
@@ -85,12 +84,10 @@ export function useRequireAuth() {
   useEffect(() => {
     if (!auth.loading && !auth.isAuthenticated) {
       setShouldRedirect(true)
-    } else if (!auth.loading && auth.isAuthenticated && !auth.isEmailVerified) {
-      setShouldRedirect(true)
     } else {
       setShouldRedirect(false)
     }
-  }, [auth.loading, auth.isAuthenticated, auth.isEmailVerified])
+  }, [auth.loading, auth.isAuthenticated])
 
   return {
     ...auth,

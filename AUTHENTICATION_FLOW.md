@@ -1,0 +1,47 @@
+# 🔐 Simplified Authentication Flow
+
+## ✅ Email Verification DISABLED
+
+The authentication system now works without email verification requirements.
+
+### 🔄 New User Flow:
+
+1. **Sign Up** → Immediate access to dashboard
+2. **Sign In** → Direct access to dashboard
+3. **Dashboard** → Only requires authentication (no email verification)
+
+### 🎯 What Changed:
+
+#### ❌ Removed:
+- Email verification requirement during sign-in
+- Email verification sending during sign-up
+- "Resend verification email" buttons
+- Email verification status checks in dashboard
+- `isEmailVerified` field from AuthContextType
+- `resendEmailVerification` function
+
+#### ✅ Updated:
+- New users are automatically set as `isActive: true` and `emailVerified: true`
+- Sign-up immediately redirects to dashboard
+- Simplified authentication logic
+- Cleaner UI without verification prompts
+
+### 🚀 Testing the Flow:
+
+1. **Visit** `http://localhost:3001`
+2. **Sign Up** with:
+   - Email: `test@example.com`
+   - Password: `password123`
+   - Restaurant Name: `Test Restaurant`
+3. **Result**: Immediately redirected to dashboard
+4. **Sign Out** and **Sign In** again with same credentials
+5. **Result**: Direct access to dashboard
+
+### 🔧 Technical Details:
+
+- **Authentication**: Firebase Auth (email/password only)
+- **User Data**: Stored in Firestore with default active status
+- **Route Protection**: Only checks authentication, not email verification
+- **Error Handling**: Simplified without verification-related errors
+
+The system is now ready for development without email verification complexity! 🎉
