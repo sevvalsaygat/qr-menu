@@ -1,11 +1,13 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useAuth } from '../../hooks/useAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { QrCode, Users, ShoppingBag, BarChart3, Plus } from 'lucide-react'
 
 export default function DashboardHome() {
+  const router = useRouter()
   const { user, userData } = useAuth()
 
   const quickActions = [
@@ -97,7 +99,12 @@ export default function DashboardHome() {
                 <CardDescription>{action.description}</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
-                <Button variant="outline" className="w-full" size="sm">
+                <Button 
+                  variant="outline" 
+                  className="w-full" 
+                  size="sm"
+                  onClick={() => router.push(action.href)}
+                >
                   Get Started
                 </Button>
               </CardContent>
