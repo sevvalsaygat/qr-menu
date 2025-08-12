@@ -142,12 +142,9 @@ export interface Order {
   items: OrderItem[]
   summary: OrderSummary
   customer?: CustomerInfo
-  status: OrderStatus
-  statusHistory: StatusHistoryEntry[]
   specialInstructions?: string
-  estimatedTime?: number
+  isCompleted: boolean
   createdAt: Timestamp | FieldValue
-  updatedAt: Timestamp | FieldValue
 }
 
 export interface OrderItem {
@@ -156,7 +153,6 @@ export interface OrderItem {
   price: number
   quantity: number
   subtotal: number
-  specialInstructions?: string
 }
 
 export interface OrderSummary {
@@ -168,16 +164,7 @@ export interface OrderSummary {
 
 export interface CustomerInfo {
   name?: string
-  phone?: string
 }
-
-export interface StatusHistoryEntry {
-  status: OrderStatus
-  timestamp: Timestamp | FieldValue
-  notes?: string
-}
-
-export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled'
 
 // Cart types (for customer interface)
 export interface CartItem {
@@ -196,7 +183,7 @@ export interface Cart {
 }
 
 // API Response types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
