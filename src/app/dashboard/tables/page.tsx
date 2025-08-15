@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../../hooks/useAuth'
 import { 
   createTable, 
@@ -36,6 +36,7 @@ import { Switch } from '../../../components/ui/switch'
 import { Textarea } from '../../../components/ui/textarea'
 import { Plus, MoreHorizontal, Edit, Trash2, QrCode, Download, Loader2 } from 'lucide-react'
 import QRCode from 'qrcode'
+import Image from 'next/image'
 
 export default function TablesPage() {
   const { user } = useAuth()
@@ -62,25 +63,15 @@ export default function TablesPage() {
     isActive: true
   })
 
-  // Load restaurant and tables
-  useEffect(() => {
-    if (user) {
-      loadData()
-    }
-  }, [user])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       setError('')
       
       // Get user's restaurant
-      console.log('Loading restaurants for user:', user!.uid)
       const restaurants = await getUserRestaurants(user!.uid)
-      console.log('Found restaurants:', restaurants)
       
       if (restaurants.length === 0) {
-        console.log('No restaurants found, creating default restaurant')
         // Try to create a default restaurant for existing users
         await createDefaultRestaurant()
         return
@@ -98,16 +89,19 @@ export default function TablesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const createDefaultRestaurant = async () => {
+  // Load restaurant and tables
+  useEffect(() => {
+    if (user) {
+      loadData()
+    }
+  }, [user, loadData])
+
+  const createDefaultRestaurant = useCallback(async () => {
     try {
-      console.log('Creating default restaurant for user:', user!.uid)
       const userData = await getUserData(user!.uid)
-      console.log('User data:', userData)
       const restaurantName = userData?.restaurantName || 'My Restaurant'
-      
-      console.log('Creating restaurant with name:', restaurantName)
       const restaurantId = await createRestaurant(user!.uid, {
         name: restaurantName,
         description: `Welcome to ${restaurantName}`,
@@ -118,7 +112,6 @@ export default function TablesPage() {
         }
       })
       
-      console.log('Restaurant created with ID:', restaurantId)
       setRestaurantId(restaurantId)
       setTables([])
       setSuccess('Restaurant setup completed! You can now add tables.')
@@ -126,7 +119,7 @@ export default function TablesPage() {
       console.error('Error creating default restaurant:', err)
       setError('Failed to create restaurant. Please try refreshing the page.')
     }
-  }
+  }, [user])
 
   const resetForm = () => {
     setFormData({
@@ -540,7 +533,7 @@ export default function TablesPage() {
           <DialogHeader>
             <DialogTitle>Delete Table</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedTable?.name}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{selectedTable?.name}&rdquo;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           
@@ -576,9 +569,11 @@ export default function TablesPage() {
           
           <div className="flex flex-col items-center space-y-4">
             {qrCodeUrl && (
-              <img 
+              <Image 
                 src={qrCodeUrl} 
                 alt="QR Code" 
+                width={300}
+                height={300}
                 className="border rounded-lg"
               />
             )}

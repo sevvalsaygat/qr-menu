@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ShoppingCart, Plus, Minus, Trash2, X } from 'lucide-react'
@@ -59,7 +58,7 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
           <span className="hidden md:ml-2 md:inline">Cart</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <span>Your Order</span>
@@ -74,7 +73,7 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex h-full flex-col">
+        <div className="flex flex-1 flex-col overflow-hidden">
           {items.length === 0 ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
@@ -83,9 +82,9 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
               </div>
             </div>
           ) : (
-            <>
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto py-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="space-y-6 p-4">
+                {/* Cart Items */}
                 <div className="space-y-4">
                   {items.map((item) => (
                     <Card key={item.product.id}>
@@ -138,43 +137,44 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
                     </Card>
                   ))}
                 </div>
-              </div>
 
-              <Separator className="my-4" />
+                <Separator />
 
-              {/* Customer Information */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="special-instructions">Special Instructions (Optional)</Label>
-                  <Textarea
-                    id="special-instructions"
-                    placeholder="Any special requests or dietary requirements..."
-                    value={specialInstructions}
-                    onChange={(e) => setSpecialInstructions(e.target.value)}
-                    rows={3}
-                  />
+                {/* Customer Information */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="special-instructions">Special Instructions (Optional)</Label>
+                    <Textarea
+                      id="special-instructions"
+                      placeholder="Any special requests or dietary requirements..."
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Order Summary */}
+                <div className="space-y-4 pb-8">
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span>Total ({totalItems} items)</span>
+                    <span>${totalPrice.toFixed(2)}</span>
+                  </div>
+                  
+                  <Button
+                    onClick={handleCheckout}
+                    className="w-full mb-4"
+                    size="lg"
+                    disabled={items.length === 0 || isCheckoutLoading}
+                  >
+                    {isCheckoutLoading ? 'Placing Order...' : 'Place Order'}
+                  </Button>
                 </div>
               </div>
-
-              <Separator className="my-4" />
-
-              {/* Order Summary */}
-              <div className="space-y-4">
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Total ({totalItems} items)</span>
-                  <span>${totalPrice.toFixed(2)}</span>
-                </div>
-                
-                <Button
-                  onClick={handleCheckout}
-                  className="w-full"
-                  size="lg"
-                  disabled={items.length === 0 || isCheckoutLoading}
-                >
-                  {isCheckoutLoading ? 'Placing Order...' : 'Place Order'}
-                </Button>
-              </div>
-            </>
+            </div>
           )}
         </div>
       </SheetContent>

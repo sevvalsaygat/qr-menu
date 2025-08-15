@@ -10,10 +10,8 @@ import {
   where, 
   orderBy, 
   limit,
-  onSnapshot,
   serverTimestamp,
-  writeBatch,
-  Unsubscribe
+  writeBatch
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { 
@@ -21,8 +19,7 @@ import {
   Table, 
   Category, 
   Product, 
-  Order, 
-  ApiResponse 
+  Order 
 } from '../types'
 
 // Restaurant operations
