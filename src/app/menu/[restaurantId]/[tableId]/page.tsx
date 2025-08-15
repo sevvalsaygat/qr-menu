@@ -1,22 +1,28 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { Restaurant, Table, Category, Product } from '@/types'
+import { Restaurant, Table, Category, Product, OrderItem, Order } from '@/types'
+import { createOrder } from '@/lib/firestore'
+import { useCart } from '@/contexts/CartContext'
+import { CartProvider } from '@/contexts/CartContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Clock, Star, AlertCircle, Utensils } from 'lucide-react'
+import { CartDrawer } from '@/components/ui/cart-drawer'
+import { Clock, Star, AlertCircle, Utensils, Plus } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-export default function CustomerMenuPage() {
+function CustomerMenuPageContent() {
   const params = useParams()
+  const router = useRouter()
   const restaurantId = params.restaurantId as string
   const tableId = params.tableId as string
 
+  const { addToCart, clearCart, items: cartItems, getTotalPrice } = useCart()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [table, setTable] = useState<Table | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
@@ -24,6 +30,8 @@ export default function CustomerMenuPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+  const [orderConfirmation, setOrderConfirmation] = useState<{ orderId: string } | null>(null)
 
   const loadMenuData = useCallback(async () => {
     try {
@@ -91,6 +99,56 @@ export default function CustomerMenuPage() {
     }
   }, [restaurantId, tableId])
 
+  const handleCheckout = async (customerInfo: { specialInstructions?: string }) => {
+    if (!restaurant || !table) return
+
+    try {
+      setIsCheckoutLoading(true)
+      
+      // Convert cart items to order items
+      const orderItems: OrderItem[] = cartItems.map(item => ({
+        productId: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        subtotal: item.product.price * item.quantity
+      }))
+
+      const subtotal = getTotalPrice()
+      const tax = 0 // No tax calculation for now
+      const total = subtotal + tax
+
+      const orderData: Omit<Order, 'id' | 'restaurantId' | 'isCompleted' | 'createdAt'> = {
+        tableId,
+        tableName: table.name,
+        items: orderItems,
+        summary: {
+          subtotal,
+          tax,
+          total,
+          itemCount: orderItems.reduce((sum, item) => sum + item.quantity, 0)
+        }
+      }
+
+      // Only add special instructions if provided
+      if (customerInfo.specialInstructions) {
+        orderData.specialInstructions = customerInfo.specialInstructions
+      }
+
+      const orderId = await createOrder(restaurantId, orderData)
+
+      // Clear cart and show confirmation
+      clearCart()
+      setOrderConfirmation({ orderId })
+      
+    } catch (error) {
+      console.error('Error placing order:', error)
+      setError('Failed to place order. Please try again.')
+    } finally {
+      setIsCheckoutLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadMenuData()
   }, [loadMenuData])
@@ -127,6 +185,68 @@ export default function CustomerMenuPage() {
             {error}
           </AlertDescription>
         </Alert>
+      </div>
+    )
+  }
+
+  // Order confirmation screen
+  if (orderConfirmation) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="mx-auto max-w-2xl">
+          <Card className="mt-8">
+            <CardContent className="p-8 text-center">
+              <div className="mb-6">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                  <Utensils className="h-8 w-8 text-green-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-green-800">Order Placed Successfully!</h1>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Order ID</p>
+                  <p className="text-xl font-mono font-bold">#{orderConfirmation.orderId.slice(-6).toUpperCase()}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground">Table</p>
+                  <p className="font-medium">{table?.name}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm text-muted-foreground">Restaurant</p>
+                  <p className="font-medium">{restaurant?.name}</p>
+                </div>
+              </div>
+              
+              <div className="mt-8 space-y-4">
+                <p className="text-muted-foreground">
+                  Your order has been sent to the restaurant. Thank you for your order!
+                </p>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => {
+                      setOrderConfirmation(null)
+                      setSelectedCategory('all')
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Order More Items
+                  </Button>
+                  <Button 
+                    onClick={() => router.push('/')}
+                    className="flex-1"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -245,9 +365,19 @@ export default function CustomerMenuPage() {
                       </div>
                     )}
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {getCategoryName(product.categoryId)}
-                  </Badge>
+                  <div className="flex items-center justify-between mt-3">
+                    <Badge variant="outline" className="text-xs">
+                      {getCategoryName(product.categoryId)}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      onClick={() => addToCart(product, 1)}
+                      className="flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add to Cart
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -269,7 +399,21 @@ export default function CustomerMenuPage() {
           <p>Thank you for dining with us!</p>
           <p className="mt-1">Table: {table?.name} • {restaurant?.name}</p>
         </div>
+
+        {/* Cart Drawer */}
+        <CartDrawer 
+          onCheckout={handleCheckout} 
+          isCheckoutLoading={isCheckoutLoading}
+        />
       </div>
     </div>
+  )
+}
+
+export default function CustomerMenuPage() {
+  return (
+    <CartProvider>
+      <CustomerMenuPageContent />
+    </CartProvider>
   )
 }

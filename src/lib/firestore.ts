@@ -10,10 +10,8 @@ import {
   where, 
   orderBy, 
   limit,
-  onSnapshot,
   serverTimestamp,
-  writeBatch,
-  Unsubscribe
+  writeBatch
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { 
@@ -21,9 +19,7 @@ import {
   Table, 
   Category, 
   Product, 
-  Order, 
-  OrderStatus,
-  ApiResponse 
+  Order 
 } from '../types'
 
 // Restaurant operations
@@ -357,20 +353,14 @@ export const deleteProduct = async (restaurantId: string, productId: string): Pr
 // Order operations
 export const createOrder = async (
   restaurantId: string, 
-  orderData: Omit<Order, 'id' | 'restaurantId' | 'status' | 'createdAt' | 'updatedAt'>
+  orderData: Omit<Order, 'id' | 'restaurantId' | 'isCompleted' | 'createdAt'>
 ): Promise<string> => {
   try {
     const docRef = await addDoc(collection(db, 'restaurants', restaurantId, 'orders'), {
       ...orderData,
       restaurantId,
-      status: 'pending' as OrderStatus,
-      statusHistory: [{
-        status: 'pending' as OrderStatus,
-        timestamp: serverTimestamp(),
-        notes: 'Order placed'
-      }],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      isCompleted: false,
+      createdAt: serverTimestamp()
     })
     return docRef.id
   } catch (error) {
@@ -381,14 +371,14 @@ export const createOrder = async (
 
 export const getOrders = async (
   restaurantId: string, 
-  status?: OrderStatus,
+  includeCompleted: boolean = true,
   limitCount: number = 50
 ): Promise<Order[]> => {
   try {
     let q = query(collection(db, 'restaurants', restaurantId, 'orders'))
     
-    if (status) {
-      q = query(q, where('status', '==', status))
+    if (!includeCompleted) {
+      q = query(q, where('isCompleted', '==', false))
     }
     
     q = query(q, orderBy('createdAt', 'desc'), limit(limitCount))
@@ -417,101 +407,37 @@ export const getOrder = async (restaurantId: string, orderId: string): Promise<O
   }
 }
 
-export const updateOrderStatus = async (
+export const markOrderAsCompleted = async (
   restaurantId: string, 
-  orderId: string, 
-  status: OrderStatus, 
-  notes: string = ''
+  orderId: string
 ): Promise<void> => {
   try {
     const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
-    const orderDoc = await getDoc(orderRef)
-    
-    if (!orderDoc.exists()) {
-      throw new Error('Order not found')
-    }
-    
-    const currentData = orderDoc.data() as Order
-    const statusHistory = currentData.statusHistory || []
-    
     await updateDoc(orderRef, {
-      status,
-      statusHistory: [
-        ...statusHistory,
-        {
-          status,
-          timestamp: serverTimestamp(),
-          notes
-        }
-      ],
-      updatedAt: serverTimestamp()
+      isCompleted: true
     })
   } catch (error) {
-    console.error('Error updating order status:', error)
-    throw new Error('Failed to update order status')
+    console.error('Error marking order as completed:', error)
+    throw new Error('Failed to mark order as completed')
   }
 }
 
-// Real-time listeners
-export const subscribeToOrders = (
+export const markOrderAsActive = async (
   restaurantId: string, 
-  callback: (orders: Order[]) => void, 
-  status?: OrderStatus,
-  limitCount: number = 50
-): Unsubscribe => {
+  orderId: string
+): Promise<void> => {
   try {
-    let q = query(collection(db, 'restaurants', restaurantId, 'orders'))
-    
-    if (status) {
-      q = query(q, where('status', '==', status))
-    }
-    
-    q = query(q, orderBy('createdAt', 'desc'), limit(limitCount))
-    
-    return onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[]
-      callback(orders)
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    await updateDoc(orderRef, {
+      isCompleted: false
     })
   } catch (error) {
-    console.error('Error subscribing to orders:', error)
-    throw new Error('Failed to subscribe to orders')
+    console.error('Error marking order as active:', error)
+    throw new Error('Failed to mark order as active')
   }
 }
 
-export const subscribeToPendingOrders = (
-  restaurantId: string, 
-  callback: (orders: Order[]) => void
-): Unsubscribe => {
-  return subscribeToOrders(restaurantId, callback, 'pending')
-}
-
-export const subscribeToActiveOrders = (
-  restaurantId: string, 
-  callback: (orders: Order[]) => void
-): Unsubscribe => {
-  try {
-    const q = query(
-      collection(db, 'restaurants', restaurantId, 'orders'),
-      where('status', 'in', ['pending', 'confirmed', 'preparing']),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    )
-    
-    return onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[]
-      callback(orders)
-    })
-  } catch (error) {
-    console.error('Error subscribing to active orders:', error)
-    throw new Error('Failed to subscribe to active orders')
-  }
-}
+// Helper functions
 
 // Batch operations
 export const bulkUpdateProducts = async (
