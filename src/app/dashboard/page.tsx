@@ -1,14 +1,99 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../hooks/useAuth'
+import { getUserRestaurants, getTables, getProducts, getOrders } from '../../lib/firestore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { QrCode, Users, ShoppingBag, BarChart3, Plus } from 'lucide-react'
+import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2 } from 'lucide-react'
+import { Timestamp } from 'firebase/firestore'
+
+interface DashboardStats {
+  totalTables: number
+  menuItems: number
+  todaysOrders: number
+  revenue: number
+}
 
 export default function DashboardHome() {
   const router = useRouter()
   const { user, userData } = useAuth()
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTables: 0,
+    menuItems: 0,
+    todaysOrders: 0,
+    revenue: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Load dashboard statistics
+  const loadDashboardStats = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      setError('')
+
+      // Get user's restaurant
+      const restaurants = await getUserRestaurants(user.uid)
+      if (restaurants.length === 0) {
+        setStats({
+          totalTables: 0,
+          menuItems: 0,
+          todaysOrders: 0,
+          revenue: 0
+        })
+        setLoading(false)
+        return
+      }
+
+      const restaurantId = restaurants[0].id
+
+      // Fetch all data in parallel
+      const [tables, products, orders] = await Promise.all([
+        getTables(restaurantId),
+        getProducts(restaurantId),
+        getOrders(restaurantId, true, 100) // Get more orders to calculate today's stats
+      ])
+
+      // Calculate today's orders and revenue
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayTimestamp = today.getTime()
+
+      const todaysOrders = orders.filter(order => {
+        const orderDate = (order.createdAt as Timestamp).toDate()
+        return orderDate.getTime() >= todayTimestamp
+      })
+
+      // Revenue should only include completed orders (paid orders)
+      const todaysCompletedOrders = todaysOrders.filter(order => order.isCompleted)
+      
+      const todaysRevenue = todaysCompletedOrders.reduce((total, order) => {
+        return total + (order.summary?.total || 0)
+      }, 0)
+
+      // Update stats
+      setStats({
+        totalTables: tables.length,
+        menuItems: products.length,
+        todaysOrders: todaysOrders.length,
+        revenue: todaysRevenue
+      })
+
+    } catch {
+      setError('Failed to load dashboard statistics')
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  // Load stats when component mounts or user changes
+  useEffect(() => {
+    loadDashboardStats()
+  }, [loadDashboardStats])
 
   const quickActions = [
     {
@@ -41,28 +126,50 @@ export default function DashboardHome() {
     }
   ]
 
-  const stats = [
-    { label: 'Total Tables', value: '0', icon: QrCode },
-    { label: 'Menu Items', value: '0', icon: ShoppingBag },
-    { label: 'Today\'s Orders', value: '0', icon: Users },
-    { label: 'Revenue', value: '$0', icon: BarChart3 }
+  const statsDisplay = [
+    { label: 'Total Tables', value: stats.totalTables.toString(), icon: QrCode },
+    { label: 'Menu Items', value: stats.menuItems.toString(), icon: ShoppingBag },
+    { label: 'Today\'s Orders', value: stats.todaysOrders.toString(), icon: Users },
+    { label: 'Revenue', value: `$${stats.revenue.toFixed(2)}`, icon: BarChart3 }
   ]
 
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">
-          Welcome back!
-        </h2>
-        <p className="text-gray-600 mt-2">
-          Manage your restaurant {userData?.restaurantName} from your dashboard
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">
+            Welcome back!
+          </h2>
+          <p className="text-gray-600 mt-2">
+            Manage your restaurant {userData?.restaurantName} from your dashboard
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={loadDashboardStats}
+          disabled={loading}
+          className="flex items-center gap-2"
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <BarChart3 className="h-4 w-4" />
+          )}
+          Refresh Stats
+        </Button>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {statsDisplay.map((stat, index) => (
           <Card key={index}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -71,7 +178,11 @@ export default function DashboardHome() {
                     {stat.label}
                   </p>
                   <p className="text-3xl font-bold text-gray-900">
-                    {stat.value}
+                    {loading ? (
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                    ) : (
+                      stat.value
+                    )}
                   </p>
                 </div>
                 <div className="p-3 bg-gray-100 rounded-full">
