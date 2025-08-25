@@ -44,15 +44,13 @@ export const signUp = async (
           isActive: true
         }
       })
-    } catch (restaurantError) {
-      console.error('Error creating restaurant during signup:', restaurantError)
+    } catch {
       // Continue with signup even if restaurant creation fails
       // The restaurant will be created later when user accesses tables
     }
     
     return { success: true, data: { user } }
   } catch (error: unknown) {
-    console.error('Error signing up:', error)
     const firebaseError = error as { code?: string }
     return { 
       success: false, 
@@ -77,7 +75,6 @@ export const signIn = async (
     
     return { success: true, data: { user } }
   } catch (error: unknown) {
-    console.error('Error signing in:', error)
     const firebaseError = error as { code?: string }
     return { 
       success: false, 
@@ -91,8 +88,7 @@ export const logOut = async (): Promise<ApiResponse> => {
   try {
     await signOut(auth)
     return { success: true }
-  } catch (error: unknown) {
-    console.error('Error signing out:', error)
+  } catch {
     return { 
       success: false, 
       error: 'Failed to sign out' 
@@ -106,7 +102,6 @@ export const resetPassword = async (email: string): Promise<ApiResponse> => {
     await sendPasswordResetEmail(auth, email)
     return { success: true }
   } catch (error: unknown) {
-    console.error('Error sending password reset email:', error)
     const firebaseError = error as { code?: string }
     return { 
       success: false, 
@@ -123,8 +118,7 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
       return userDoc.data() as UserData
     }
     return null
-  } catch (error) {
-    console.error('Error getting user data:', error)
+  } catch {
     throw new Error('Failed to get user data')
   }
 }
@@ -174,8 +168,7 @@ export const updateUserProfile = async (
     })
     
     return { success: true }
-  } catch (error: unknown) {
-    console.error('Error updating profile:', error)
+  } catch {
     return { 
       success: false, 
       error: 'Failed to update profile' 

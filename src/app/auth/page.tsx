@@ -9,13 +9,15 @@ import { Input } from '../../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Label } from '../../components/ui/label'
 import { Alert, AlertDescription } from '../../components/ui/alert'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
 
@@ -44,7 +46,15 @@ export default function AuthPage() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirmPassword') as string
     const restaurantName = formData.get('restaurantName') as string
+
+    // Validate password confirmation for sign-up
+    if (isSignUp && password !== confirmPassword) {
+      setError('Passwords do not match')
+      setSubmitting(false)
+      return
+    }
 
     try {
       if (isSignUp) {
@@ -62,7 +72,7 @@ export default function AuthPage() {
           setError(result.error || 'Failed to sign in')
         }
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setSubmitting(false)
@@ -99,16 +109,65 @@ export default function AuthPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                required
-                disabled={submitting}
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  required
+                  disabled={submitting}
+                  minLength={6}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={submitting}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
+                </Button>
+              </div>
             </div>
+
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    required
+                    disabled={submitting}
+                    minLength={6}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={submitting}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-500" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {isSignUp && (
               <div className="space-y-2">
@@ -153,6 +212,8 @@ export default function AuthPage() {
                 setIsSignUp(!isSignUp)
                 setError('')
                 setSuccess('')
+                setShowPassword(false)
+                setShowConfirmPassword(false)
               }}
               className="text-sm text-blue-600 hover:text-blue-800 underline"
               disabled={submitting}
