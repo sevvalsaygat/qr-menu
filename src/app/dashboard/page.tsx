@@ -6,14 +6,15 @@ import { useAuth } from '../../hooks/useAuth'
 import { getUserRestaurants, getTables, getProducts, getOrders } from '../../lib/firestore'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2 } from 'lucide-react'
+import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2, DollarSign } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 
 interface DashboardStats {
   totalTables: number
   menuItems: number
   todaysOrders: number
-  revenue: number
+  dailyRevenue: number
+  totalRevenue: number
 }
 
 export default function DashboardHome() {
@@ -23,7 +24,8 @@ export default function DashboardHome() {
     totalTables: 0,
     menuItems: 0,
     todaysOrders: 0,
-    revenue: 0
+    dailyRevenue: 0,
+    totalRevenue: 0
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -43,7 +45,8 @@ export default function DashboardHome() {
           totalTables: 0,
           menuItems: 0,
           todaysOrders: 0,
-          revenue: 0
+          dailyRevenue: 0,
+          totalRevenue: 0
         })
         setLoading(false)
         return
@@ -68,10 +71,16 @@ export default function DashboardHome() {
         return orderDate.getTime() >= todayTimestamp
       })
 
-      // Revenue should only include completed orders (paid orders)
+      // Calculate daily revenue (today's completed orders only)
       const todaysCompletedOrders = todaysOrders.filter(order => order.isCompleted)
       
       const todaysRevenue = todaysCompletedOrders.reduce((total, order) => {
+        return total + (order.summary?.total || 0)
+      }, 0)
+
+      // Calculate total revenue (all completed orders)
+      const allCompletedOrders = orders.filter(order => order.isCompleted)
+      const totalRevenue = allCompletedOrders.reduce((total, order) => {
         return total + (order.summary?.total || 0)
       }, 0)
 
@@ -80,7 +89,8 @@ export default function DashboardHome() {
         totalTables: tables.length,
         menuItems: products.length,
         todaysOrders: todaysOrders.length,
-        revenue: todaysRevenue
+        dailyRevenue: todaysRevenue,
+        totalRevenue: totalRevenue
       })
 
     } catch {
@@ -130,7 +140,8 @@ export default function DashboardHome() {
     { label: 'Total Tables', value: stats.totalTables.toString(), icon: QrCode },
     { label: 'Menu Items', value: stats.menuItems.toString(), icon: ShoppingBag },
     { label: 'Today\'s Orders', value: stats.todaysOrders.toString(), icon: Users },
-    { label: 'Revenue', value: `$${stats.revenue.toFixed(2)}`, icon: BarChart3 }
+    { label: 'Daily Revenue', value: `$${stats.dailyRevenue.toFixed(2)}`, icon: DollarSign },
+    { label: 'Total Revenue', value: `$${stats.totalRevenue.toFixed(2)}`, icon: BarChart3 }
   ]
 
   return (
@@ -168,7 +179,7 @@ export default function DashboardHome() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {statsDisplay.map((stat, index) => (
           <Card key={index}>
             <CardContent className="p-6">
