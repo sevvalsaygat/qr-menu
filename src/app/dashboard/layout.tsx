@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useRequireAuth } from '../../hooks/useAuth'
 import { logOut } from '../../lib/auth'
 import { Button } from '../../components/ui/button'
-import { LogOut, User, Home, QrCode, ShoppingBag, BarChart3 } from 'lucide-react'
+import { LogOut, User, Home, QrCode, ShoppingBag, BarChart3, Plus } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -33,6 +33,7 @@ export default function DashboardLayout({
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Tables', href: '/dashboard/tables', icon: QrCode },
     { name: 'Categories', href: '/dashboard/categories', icon: ShoppingBag },
+    { name: 'Products', href: '/dashboard/products', icon: Plus },
     { name: 'Orders', href: '/dashboard/orders', icon: BarChart3 }
   ]
 
