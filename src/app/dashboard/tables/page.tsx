@@ -559,7 +559,7 @@ export default function TablesPage() {
 
       {/* QR Code Dialog */}
       <Dialog open={isQRDialogOpen} onOpenChange={setIsQRDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>QR Code for {selectedTable?.name}</DialogTitle>
             <DialogDescription>
@@ -567,7 +567,7 @@ export default function TablesPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex flex-col items-center space-y-4">
+          <div className="flex flex-col items-center space-y-4 w-full overflow-hidden">
             {qrCodeUrl && (
               <Image 
                 src={qrCodeUrl} 
@@ -578,9 +578,9 @@ export default function TablesPage() {
               />
             )}
             
-            <div className="text-center text-sm text-gray-600">
-              <p>Menu URL:</p>
-              <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+            <div className="text-center text-sm text-gray-600 w-full">
+              <p className="mb-2">Menu URL:</p>
+              <code className="bg-gray-100 px-2 py-1 rounded text-xs break-all block w-full max-w-full overflow-wrap-anywhere">
                 {window.location.origin}/menu/{restaurantId}/{selectedTable?.id}
               </code>
             </div>
