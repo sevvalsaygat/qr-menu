@@ -439,6 +439,52 @@ export const markOrderAsActive = async (
 
 // Helper functions
 
+// Get products by specific category
+export const getProductsByCategory = async (
+  restaurantId: string, 
+  categoryId: string
+): Promise<Product[]> => {
+  try {
+    const q = query(
+      collection(db, 'restaurants', restaurantId, 'products'),
+      where('categoryId', '==', categoryId),
+      orderBy('name')
+    )
+    const querySnapshot = await getDocs(q)
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Product[]
+  } catch (error) {
+    console.error('Error getting products by category:', error)
+    throw new Error('Failed to get products by category')
+  }
+}
+
+// Bulk reassign products to new category
+export const bulkReassignProductsCategory = async (
+  restaurantId: string, 
+  productIds: string[],
+  newCategoryId: string
+): Promise<void> => {
+  try {
+    const batch = writeBatch(db)
+    
+    productIds.forEach(productId => {
+      const productRef = doc(db, 'restaurants', restaurantId, 'products', productId)
+      batch.update(productRef, {
+        categoryId: newCategoryId,
+        updatedAt: serverTimestamp()
+      })
+    })
+    
+    await batch.commit()
+  } catch (error) {
+    console.error('Error bulk reassigning products:', error)
+    throw new Error('Failed to reassign products to new category')
+  }
+}
+
 // Batch operations
 export const bulkUpdateProducts = async (
   restaurantId: string, 
