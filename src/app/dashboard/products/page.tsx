@@ -74,7 +74,8 @@ export default function ProductsPage() {
     categoryId: '',
     isAvailable: true,
     isFeatured: false,
-    preparationTime: ''
+    preparationTime: '',
+    image: null as File | null
   })
 
   const createDefaultRestaurant = useCallback(async () => {
@@ -157,13 +158,20 @@ export default function ProductsPage() {
       categoryId: '',
       isAvailable: true,
       isFeatured: false,
-      preparationTime: ''
+      preparationTime: '',
+      image: null
     })
   }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!restaurantId) return
+
+    // Validate required image
+    if (!formData.image) {
+      setError('Product image is required')
+      return
+    }
 
     try {
       setSubmitting(true)
@@ -176,7 +184,10 @@ export default function ProductsPage() {
         categoryId: formData.categoryId,
         isAvailable: formData.isAvailable,
         isFeatured: formData.isFeatured,
-        preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined
+        preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined,
+        // For now, we'll store the image as a placeholder URL
+        // In a real implementation, you would upload to Firebase Storage
+        imageUrl: 'placeholder-image-url'
       }
 
       await createProduct(restaurantId, productData)
@@ -277,7 +288,8 @@ export default function ProductsPage() {
       categoryId: product.categoryId,
       isAvailable: product.isAvailable,
       isFeatured: product.isFeatured,
-      preparationTime: product.preparationTime?.toString() || ''
+      preparationTime: product.preparationTime?.toString() || '',
+      image: null // Reset image for edit dialog
     })
     setIsEditDialogOpen(true)
   }
@@ -365,6 +377,45 @@ export default function ProductsPage() {
                   disabled={submitting}
                   rows={2}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image">Product Image *</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    if (file) {
+                      // Validate file size (max 5MB)
+                      if (file.size > 5 * 1024 * 1024) {
+                        setError('Image file must be smaller than 5MB')
+                        e.target.value = '' // Clear the input
+                        return
+                      }
+                      // Validate file type
+                      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                        setError('Please select a valid image file (JPG, PNG, or WebP)')
+                        e.target.value = '' // Clear the input
+                        return
+                      }
+                      setError('') // Clear any previous errors
+                    }
+                    setFormData({ ...formData, image: file })
+                  }}
+                  required
+                  disabled={submitting}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                />
+                <p className="text-xs text-gray-500">
+                  Upload a high-quality image of your product (JPG, PNG, WebP, max 5MB)
+                </p>
+                {formData.image && (
+                  <p className="text-xs text-green-600">
+                    ✓ Selected: {formData.image.name}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
