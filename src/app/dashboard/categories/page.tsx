@@ -10,7 +10,8 @@ import {
   getUserRestaurants,
   createRestaurant,
   getProductsByCategory,
-  bulkReassignProductsCategory 
+  bulkReassignProductsCategory,
+  getCategoryProductCounts
 } from '../../../lib/firestore'
 import { getUserData } from '../../../lib/auth'
 import { Category, Product } from '../../../types'
@@ -48,6 +49,7 @@ import { Plus, MoreHorizontal, Edit, Trash2, ShoppingBag, Loader2, Eye, EyeOff, 
 export default function CategoriesPage() {
   const { user } = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
+  const [productCounts, setProductCounts] = useState<Record<string, number>>({})
   const [restaurantId, setRestaurantId] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -90,6 +92,7 @@ export default function CategoriesPage() {
       
       setRestaurantId(restaurantId)
       setCategories([])
+      setProductCounts({})
       setSuccess('Restaurant setup completed! You can now add categories.')
     } catch (err) {
       setError('Failed to create restaurant. Please try refreshing the page.')
@@ -113,9 +116,14 @@ export default function CategoriesPage() {
       const restaurant = restaurants[0]
       setRestaurantId(restaurant.id)
       
-      // Load categories
-      const categoriesData = await getCategories(restaurant.id)
+      // Load categories and product counts in parallel
+      const [categoriesData, productCountsData] = await Promise.all([
+        getCategories(restaurant.id),
+        getCategoryProductCounts(restaurant.id)
+      ])
+      
       setCategories(categoriesData)
+      setProductCounts(productCountsData)
     } catch (err) {
       setError('Failed to load categories')
       console.error(err)
@@ -523,6 +531,9 @@ export default function CategoriesPage() {
                         {!category.isVisible && (
                           <EyeOff className="h-4 w-4 text-gray-400" />
                         )}
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {productCounts[category.id] || 0} product{(productCounts[category.id] || 0) !== 1 ? 's' : ''}
                       </div>
                       {category.description && (
                         <CardDescription className="mt-1">
