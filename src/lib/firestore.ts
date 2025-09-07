@@ -508,6 +508,27 @@ export const bulkUpdateProducts = async (
   }
 }
 
+// Get product counts for all categories
+export const getCategoryProductCounts = async (restaurantId: string): Promise<Record<string, number>> => {
+  try {
+    const q = query(collection(db, 'restaurants', restaurantId, 'products'))
+    const querySnapshot = await getDocs(q)
+    
+    const counts: Record<string, number> = {}
+    
+    querySnapshot.docs.forEach(doc => {
+      const product = doc.data() as Product
+      const categoryId = product.categoryId
+      counts[categoryId] = (counts[categoryId] || 0) + 1
+    })
+    
+    return counts
+  } catch (error) {
+    console.error('Error getting category product counts:', error)
+    throw new Error('Failed to get category product counts')
+  }
+}
+
 // Utility functions
 export const generateOrderNumber = (): string => {
   return Math.floor(10000000 + Math.random() * 90000000).toString()
