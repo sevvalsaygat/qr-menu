@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '../../../hooks/useAuth'
 import { 
   createProduct, 
@@ -46,6 +47,7 @@ import { Plus, MoreHorizontal, Edit, Trash2, Package, Loader2, Eye, EyeOff, Doll
 
 export default function ProductsPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [restaurantId, setRestaurantId] = useState<string>('')
@@ -138,6 +140,14 @@ export default function ProductsPage() {
       loadData()
     }
   }, [user, loadData])
+
+  // Handle URL search parameters for category filtering
+  useEffect(() => {
+    const categoryParam = searchParams.get('category')
+    if (categoryParam) {
+      setSelectedCategoryFilter(categoryParam)
+    }
+  }, [searchParams])
 
   const resetForm = () => {
     setFormData({
@@ -310,6 +320,11 @@ export default function ProductsPage() {
           <p className="text-gray-600 mt-1">
             Manage your menu items and their details
           </p>
+          {selectedCategoryFilter !== 'all' && (
+            <div className="mt-2 text-sm text-blue-600">
+              Showing products from: {getCategoryName(selectedCategoryFilter)}
+            </div>
+          )}
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
