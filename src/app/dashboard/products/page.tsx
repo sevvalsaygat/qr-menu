@@ -43,7 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../components/ui/select'
-import { Plus, MoreHorizontal, Edit, Trash2, Package, Loader2, Eye, EyeOff, DollarSign, Filter } from 'lucide-react'
+import { Plus, MoreHorizontal, Edit, Trash2, Package, Loader2, Eye, EyeOff, DollarSign, Filter, Search, X } from 'lucide-react'
 
 export default function ProductsPage() {
   const { user } = useAuth()
@@ -58,6 +58,7 @@ export default function ProductsPage() {
   // Filter states
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all')
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   
   // Form states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -304,7 +305,7 @@ export default function ProductsPage() {
     return category?.name || 'Unknown Category'
   }
 
-  // Filter products based on selected filters
+  // Filter products based on selected filters and search query
   const filteredProducts = products.filter(product => {
     const categoryMatch = selectedCategoryFilter === 'all' || product.categoryId === selectedCategoryFilter
     const availabilityMatch = availabilityFilter === 'all' || 
@@ -312,7 +313,13 @@ export default function ProductsPage() {
       (availabilityFilter === 'unavailable' && !product.isAvailable) ||
       (availabilityFilter === 'featured' && product.isFeatured)
     
-    return categoryMatch && availabilityMatch
+    // Search in product name, description, and category name
+    const searchMatch = searchQuery === '' || 
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      getCategoryName(product.categoryId).toLowerCase().includes(searchQuery.toLowerCase())
+    
+    return categoryMatch && availabilityMatch && searchMatch
   })
 
   if (loading) {
@@ -584,6 +591,37 @@ export default function ProductsPage() {
         </Card>
       )}
 
+        {/* Search Bar */}
+        <div className="flex justify-start">
+          <div className="w-full max-w-md">
+            <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search products by name, description, or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10 bg-transparent border-gray-300"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                type="button"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="text-sm text-gray-600 mt-2 text-left">
+              {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found for &ldquo;{searchQuery}&rdquo;
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Products Grid */}
       {categories.length === 0 ? (
         <Card>
@@ -603,12 +641,14 @@ export default function ProductsPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold mb-2">
-              {products.length === 0 ? 'No products yet' : 'No products match your filters'}
+              {products.length === 0 ? 'No products yet' : 'No products found'}
             </h3>
             <p className="text-gray-600 text-center mb-4">
               {products.length === 0 
                 ? 'Create your first product to start building your menu'
-                : 'Try adjusting your filters to see more products'
+                : searchQuery 
+                  ? `No products match &ldquo;${searchQuery}&rdquo;. Try a different search term or adjust your filters.`
+                  : 'No products match your current filters. Try adjusting your filters to see more products.'
               }
             </p>
             {products.length === 0 && (
