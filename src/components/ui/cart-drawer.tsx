@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext'
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -23,7 +24,7 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawerProps) {
-  const { items, updateQuantity, removeFromCart, getTotalItems, getTotalPrice, isOpen, setIsOpen } = useCart()
+  const { items, updateQuantity, removeFromCart, getTotalItems, getTotalPrice, isOpen, setIsOpen, isAnimating } = useCart()
   const [specialInstructions, setSpecialInstructions] = useState('')
 
   const totalItems = getTotalItems()
@@ -41,21 +42,21 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button
-          variant="outline"
-          size="sm"
-          className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full shadow-lg md:h-auto md:w-auto md:rounded-lg md:px-4"
+          variant="default"
+          size="lg"
+          className={`fixed top-4 right-4 z-50 h-14 px-6 rounded-full shadow-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all duration-200 hover:scale-105 ${isAnimating ? 'cart-pulse-smooth' : ''}`}
           onClick={() => setIsOpen(true)}
         >
-          <ShoppingCart className="h-5 w-5" />
+          <ShoppingCart className="h-6 w-6 mr-2" />
+          <span className="text-lg">Cart</span>
           {totalItems > 0 && (
             <Badge
-              variant="destructive"
-              className="absolute -right-2 -top-2 h-6 w-6 rounded-full p-0 text-xs md:relative md:ml-2 md:h-auto md:w-auto md:rounded-md md:px-2 md:py-1"
+              variant="secondary"
+              className={`absolute -right-2 -top-2 h-7 w-7 rounded-full p-0 text-sm font-bold bg-yellow-400 text-black border-2 border-white ${isAnimating ? 'cart-bounce-smooth' : ''}`}
             >
               {totalItems}
             </Badge>
           )}
-          <span className="hidden md:ml-2 md:inline">Cart</span>
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg flex flex-col">
@@ -71,6 +72,9 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
               <X className="h-4 w-4" />
             </Button>
           </SheetTitle>
+          <SheetDescription>
+            Review your selected items and place your order
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col overflow-hidden">

@@ -19,6 +19,8 @@ interface CartContextType {
   getTotalPrice: () => number
   isOpen: boolean
   setIsOpen: (open: boolean) => void
+  isAnimating: boolean
+  triggerAnimation: () => void
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -26,6 +28,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -45,6 +48,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('qr-menu-cart', JSON.stringify(items))
   }, [items])
 
+  const triggerAnimation = () => {
+    setIsAnimating(true)
+    // Reset animation state after animation completes (2.1s to ensure CSS animation finishes)
+    setTimeout(() => {
+      setIsAnimating(false)
+    }, 2100)
+  }
+
   const addToCart = (product: Product, quantity = 1) => {
     setItems(currentItems => {
       const existingItem = currentItems.find(item => item.product.id === product.id)
@@ -59,6 +70,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       return [...currentItems, { product, quantity }]
     })
+    
+    // Trigger animation whenever item is added
+    triggerAnimation()
   }
 
   const removeFromCart = (productId: string) => {
@@ -102,7 +116,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     getTotalItems,
     getTotalPrice,
     isOpen,
-    setIsOpen
+    setIsOpen,
+    isAnimating,
+    triggerAnimation
   }
 
   return (
