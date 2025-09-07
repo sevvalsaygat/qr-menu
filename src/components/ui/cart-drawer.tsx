@@ -5,6 +5,7 @@ import { useCart } from '@/contexts/CartContext'
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -71,6 +72,9 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
               <X className="h-4 w-4" />
             </Button>
           </SheetTitle>
+          <SheetDescription>
+            Review your selected items and place your order
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col overflow-hidden">
