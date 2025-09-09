@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ShoppingCart, Plus, Minus, Trash2, X } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 
 interface CartDrawerProps {
@@ -61,17 +61,7 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle className="flex items-center justify-between">
-            <span>Your Order</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </SheetTitle>
+          <SheetTitle>Your Order</SheetTitle>
           <SheetDescription>
             Review your selected items and place your order
           </SheetDescription>
