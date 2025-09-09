@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button'
 import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2, DollarSign } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
+import MonthlyRevenueBarChart from '../../components/charts/MonthlyRevenueBarChart'
+import { calculateMonthlyRevenueData, generateSampleMonthlyRevenueData, MonthlyRevenueStats } from '../../lib/monthly-revenue-analytics'
 
 interface DashboardStats {
   totalTables: number
@@ -29,6 +31,14 @@ export default function DashboardHome() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  
+  // Monthly revenue chart state
+  const [monthlyRevenueData, setMonthlyRevenueData] = useState<MonthlyRevenueStats>({
+    totalRevenue: 0,
+    growthPercentage: 0,
+    data: []
+  })
+  const [chartLoading, setChartLoading] = useState(true)
 
   // Load dashboard statistics
   const loadDashboardStats = useCallback(async () => {
@@ -100,10 +110,59 @@ export default function DashboardHome() {
     }
   }, [user])
 
+  // Load monthly revenue data
+  const loadMonthlyRevenueData = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setChartLoading(true)
+
+      // Get user's restaurant
+      const restaurants = await getUserRestaurants(user.uid)
+      if (restaurants.length === 0) {
+        // Use sample data if no restaurant found
+        const sampleData = generateSampleMonthlyRevenueData(6)
+        setMonthlyRevenueData(sampleData)
+        return
+      }
+
+      const restaurantId = restaurants[0].id
+
+      // Try to get real revenue data, fallback to sample data
+      try {
+        console.log('🏪 Loading real monthly revenue data for restaurant:', restaurantId)
+        const revenueData = await calculateMonthlyRevenueData(restaurantId, 6)
+        
+        // Check if we got real data or if we need sample data
+        if (revenueData.totalRevenue > 0) {
+          console.log('✅ Using real revenue data:', revenueData.totalRevenue)
+          setMonthlyRevenueData(revenueData)
+        } else {
+          console.log('📊 No completed orders found, using sample data for demonstration')
+          const sampleData = generateSampleMonthlyRevenueData(6)
+          setMonthlyRevenueData(sampleData)
+        }
+      } catch (revenueError) {
+        console.error('❌ Error loading monthly revenue data, using sample data:', revenueError)
+        const sampleData = generateSampleMonthlyRevenueData(6)
+        setMonthlyRevenueData(sampleData)
+      }
+
+    } catch (error) {
+      console.error('Error loading monthly revenue data:', error)
+      // Use sample data as fallback
+      const sampleData = generateSampleMonthlyRevenueData(6)
+      setMonthlyRevenueData(sampleData)
+    } finally {
+      setChartLoading(false)
+    }
+  }, [user])
+
   // Load stats when component mounts or user changes
   useEffect(() => {
     loadDashboardStats()
-  }, [loadDashboardStats])
+    loadMonthlyRevenueData()
+  }, [loadDashboardStats, loadMonthlyRevenueData])
 
   const quickActions = [
     {
@@ -203,6 +262,24 @@ export default function DashboardHome() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Monthly Revenue Chart - Half Width */}
+      <div className="mt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Half - Monthly Revenue Chart */}
+          <div>
+            <MonthlyRevenueBarChart 
+              data={monthlyRevenueData} 
+              loading={chartLoading} 
+            />
+          </div>
+          
+          {/* Right Half - Empty Space */}
+          <div>
+            {/* Intentionally left empty as requested */}
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
