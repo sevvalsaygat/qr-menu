@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Label } from '../../components/ui/label'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
+import PasswordStrengthTooltip from '../../components/ui/password-strength-tooltip'
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -18,6 +19,9 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
+  const [showPasswordTooltip, setShowPasswordTooltip] = useState(false)
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
 
@@ -109,7 +113,24 @@ export default function AuthPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
+              <div className="relative" style={{ position: 'relative' }}>
+                {/* Strong indicator - appears on the right when all criteria are met */}
+                {isSignUp && password && (() => {
+                  const criteriaMet = [
+                    password.length >= 8,
+                    /[a-z]/.test(password) || /[A-Z]/.test(password), // More flexible: either lowercase OR uppercase
+                    /\d/.test(password),
+                    /[!@#$%^&*(),.?":{}|<>]/.test(password)
+                  ]
+                  const allCriteriaMet = criteriaMet.every(Boolean)
+                  
+                  return allCriteriaMet ? (
+                    <div className="absolute right-12 top-1/2 transform -translate-y-1/2 z-10">
+                      <span className="text-green-800 font-semibold text-sm">Strong</span>
+                    </div>
+                  ) : null
+                })()}
+                
                 <Input
                   id="password"
                   name="password"
@@ -117,8 +138,15 @@ export default function AuthPage() {
                   placeholder="Enter your password"
                   required
                   disabled={submitting}
-                  minLength={6}
+                  minLength={8}
                   className="pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => isSignUp && setShowPasswordTooltip(true)}
+                  onBlur={() => {
+                    // Delay hiding to allow clicking on tooltip
+                    setTimeout(() => setShowPasswordTooltip(false), 200)
+                  }}
                 />
                 <Button
                   type="button"
@@ -134,6 +162,16 @@ export default function AuthPage() {
                     <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </Button>
+                
+                {/* Password Strength Tooltip */}
+                {isSignUp && (
+                  <PasswordStrengthTooltip
+                    password={password}
+                    username={username}
+                    isVisible={showPasswordTooltip}
+                    onClose={() => setShowPasswordTooltip(false)}
+                  />
+                )}
               </div>
             </div>
 
@@ -179,6 +217,8 @@ export default function AuthPage() {
                   placeholder="Enter your restaurant name"
                   required
                   disabled={submitting}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
             )}
@@ -214,6 +254,9 @@ export default function AuthPage() {
                 setSuccess('')
                 setShowPassword(false)
                 setShowConfirmPassword(false)
+                setPassword('')
+                setUsername('')
+                setShowPasswordTooltip(false)
               }}
               className="text-sm text-blue-600 hover:text-blue-800 underline"
               disabled={submitting}
