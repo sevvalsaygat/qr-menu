@@ -23,27 +23,28 @@ export default function MonthlyRevenueBarChart({ data, loading }: MonthlyRevenue
 
   const { totalRevenue, growthPercentage } = data
 
-  // Prepare chart data
-  const chartData = data.data.map(item => ({
-    x: item.monthName,
-    y: item.revenue
-  }))
-
-  // Debug: Verify chart data matches total revenue
-  const chartTotal = chartData.reduce((sum, item) => sum + item.y, 0)
-  console.log('📊 Chart Data Verification:', {
-    totalRevenue: data.totalRevenue,
-    chartDataSum: chartTotal,
-    mismatch: Math.abs(data.totalRevenue - chartTotal) > 0.01 ? `⚠️ MISMATCH` : '✅ Match',
-    chartData: chartData.slice(-3), // Show last 3 months
-    dataLength: chartData.length
+  // Prepare stacked chart data
+  const categories = data.data.map(item => item.monthName)
+  
+  // For stacked bars: 
+  // - Bottom series: Monthly revenue minus weekly revenue (blue)
+  // - Top series: Weekly revenue (green)
+  const remainingMonthlyData = data.data.map(item => {
+    const monthly = item.revenue
+    const weekly = item.weeklyRevenue || 0
+    return Math.max(0, monthly - weekly) // Remaining monthly revenue after subtracting weekly
   })
+  
+  const weeklyData = data.data.map(item => item.weeklyRevenue ?? 0)
+
+  
 
   // Modern ApexCharts Bar Chart configuration inspired by "Dashboards > Modern" design
   const chartOptions = {
     chart: {
       type: 'bar' as const,
       height: 280,
+      stacked: true, // Enable stacked bars
       toolbar: {
         show: false
       },
@@ -73,14 +74,14 @@ export default function MonthlyRevenueBarChart({ data, loading }: MonthlyRevenue
         }
       }
     },
-    colors: ['#3b82f6'], // Modern blue color
+    colors: ['#3b82f6', '#10b981'], // Blue for monthly, green for weekly
     fill: {
       type: 'gradient',
       gradient: {
         shade: 'light',
         type: 'vertical',
         shadeIntensity: 0.25,
-        gradientToColors: ['#60a5fa'],
+        gradientToColors: ['#60a5fa', '#34d399'], // Light blue and light green
         inverseColors: false,
         opacityFrom: 0.85,
         opacityTo: 0.55,
@@ -89,11 +90,26 @@ export default function MonthlyRevenueBarChart({ data, loading }: MonthlyRevenue
     },
     dataLabels: {
       enabled: true,
-      formatter: function (val: number) {
-        if (val >= 1000) {
-          return '$' + (val / 1000).toFixed(1) + 'k'
+      formatter: function (val: number, opts: { seriesIndex: number, dataPointIndex: number }) {
+        if (val === 0) return '' // Don't show labels for zero values
+        
+        // For stacked bars, show total on top segment only
+        if (opts.seriesIndex === 1 && val > 0) {
+          // This is the weekly revenue (top segment), show the total monthly revenue
+          const totalMonthly = data.data[opts.dataPointIndex].revenue
+          if (totalMonthly >= 1000) {
+            return '$' + (totalMonthly / 1000).toFixed(1) + 'k'
+          }
+          return '$' + totalMonthly.toFixed(0)
+        } else if (opts.seriesIndex === 0 && weeklyData[opts.dataPointIndex] === 0) {
+          // This is monthly revenue with no weekly data, show the monthly total
+          if (val >= 1000) {
+            return '$' + (val / 1000).toFixed(1) + 'k'
+          }
+          return '$' + val.toFixed(0)
         }
-        return '$' + val.toFixed(0)
+        
+        return '' // Don't show label for bottom segment when stacked
       },
       offsetY: -20,
       style: {
@@ -103,7 +119,7 @@ export default function MonthlyRevenueBarChart({ data, loading }: MonthlyRevenue
       }
     },
     xaxis: {
-      categories: data.data.map(item => item.monthName),
+      categories: categories,
       labels: {
         style: {
           colors: '#6b7280',
@@ -177,26 +193,56 @@ export default function MonthlyRevenueBarChart({ data, loading }: MonthlyRevenue
         fontSize: '12px',
         fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif'
       },
+      custom: function({ dataPointIndex }: { dataPointIndex: number }) {
+        const monthData = data.data[dataPointIndex]
+        const monthlyRevenue = monthData.revenue
+        const weeklyRevenue = monthData.weeklyRevenue || 0
+        const monthName = monthData.monthName
+        
+        let tooltipContent = `
+          <div style="padding: 8px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 6px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #374151;">${monthName}</div>
+            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+              <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; margin-right: 8px;"></div>
+              <span style="color: #6b7280;">Monthly Revenue: </span>
+              <span style="font-weight: 600; color: #374151;">$${monthlyRevenue.toLocaleString('en-US', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}</span>
+            </div>
+        `
+        
+        // Only show weekly revenue if it exists
+        if (weeklyRevenue > 0) {
+          tooltipContent += `
+            <div style="display: flex; align-items: center;">
+              <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 8px;"></div>
+              <span style="color: #6b7280;">Weekly Revenue: </span>
+              <span style="font-weight: 600; color: #374151;">$${weeklyRevenue.toLocaleString('en-US', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}</span>
+            </div>
+          `
+        }
+        
+        tooltipContent += `</div>`
+        
+        return tooltipContent
+      },
       x: {
-        show: true,
-        format: 'MMM yyyy'
+        show: false // Hide default x-axis tooltip since we're using custom
       },
       y: {
-        formatter: function (val: number) {
-          return '$' + val.toLocaleString('en-US', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-          })
-        }
+        formatter: undefined // Disable default y-axis formatter
       },
       marker: {
         show: true
       },
-      custom: undefined,
       fillSeriesColor: false,
       followCursor: false,
       inverseOrder: false,
-      shared: false,
+      shared: false, // Disable shared tooltip since we're using custom
       intersect: false
     },
     responsive: [
@@ -224,7 +270,11 @@ export default function MonthlyRevenueBarChart({ data, loading }: MonthlyRevenue
   const series = [
     {
       name: 'Monthly Revenue',
-      data: chartData.map(item => item.y)
+      data: remainingMonthlyData
+    },
+    {
+      name: 'Weekly Revenue', 
+      data: weeklyData
     }
   ]
 

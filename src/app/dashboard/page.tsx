@@ -130,15 +130,12 @@ export default function DashboardHome() {
 
       // Try to get real revenue data, fallback to sample data
       try {
-        console.log('🏪 Loading real monthly revenue data for restaurant:', restaurantId)
         const revenueData = await calculateMonthlyRevenueData(restaurantId, 6)
         
         // Check if we got real data or if we need sample data
         if (revenueData.totalRevenue > 0) {
-          console.log('✅ Using real revenue data:', revenueData.totalRevenue)
           setMonthlyRevenueData(revenueData)
         } else {
-          console.log('📊 No completed orders found, using sample data for demonstration')
           const sampleData = generateSampleMonthlyRevenueData(6)
           setMonthlyRevenueData(sampleData)
         }

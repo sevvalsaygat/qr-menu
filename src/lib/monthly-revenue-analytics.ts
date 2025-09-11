@@ -5,6 +5,7 @@ export interface MonthlyRevenueData {
   month: string // Format: "2024-01" 
   monthName: string // Format: "Jan 2024"
   revenue: number
+  weeklyRevenue?: number // Current week revenue (only for current month)
 }
 
 export interface MonthlyRevenueStats {
@@ -54,25 +55,27 @@ export const calculateMonthlyRevenueData = async (
     // Group orders by month and calculate revenue
     const revenueByMonth: { [key: string]: number } = {}
     let totalRevenue = 0
+    let currentWeekRevenue = 0
 
-    // Debug: Track order processing
-    const orderDetails: Array<{orderId: string, date: string, monthKey: string, amount: number}> = []
-    
+    // Calculate current week date range (Sunday to today)
+    const now = new Date()
+    const currentWeekStart = new Date(now)
+    currentWeekStart.setDate(now.getDate() - now.getDay()) // Start of current week (Sunday)
+    currentWeekStart.setHours(0, 0, 0, 0)
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
     orders.forEach(order => {
       if (order.createdAt && order.summary?.total && order.isCompleted === true) {
         const orderDate = order.createdAt.toDate()
         const monthKey = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`
         
-        // Track this order for debugging
-        orderDetails.push({
-          orderId: order.id,
-          date: orderDate.toISOString().split('T')[0],
-          monthKey,
-          amount: order.summary.total
-        })
-        
         revenueByMonth[monthKey] = (revenueByMonth[monthKey] || 0) + order.summary.total
         totalRevenue += order.summary.total
+
+        // Calculate current week revenue (only for current month)
+        if (monthKey === currentMonth && orderDate >= currentWeekStart) {
+          currentWeekRevenue += order.summary.total
+        }
       }
     })
 
@@ -90,10 +93,14 @@ export const calculateMonthlyRevenueData = async (
         year: 'numeric' 
       })
       
+      const monthRevenue = revenueByMonth[monthKey] || 0
+      const isLastMonth = i === months - 1 // Only the last month gets weekly revenue
+      
       data.push({
         month: monthKey,
         monthName,
-        revenue: revenueByMonth[monthKey] || 0
+        revenue: monthRevenue,
+        weeklyRevenue: isLastMonth ? currentWeekRevenue : undefined
       })
     }
 
@@ -107,27 +114,7 @@ export const calculateMonthlyRevenueData = async (
       growthPercentage = ((lastQuarterRevenue - previousQuarterRevenue) / previousQuarterRevenue) * 100
     }
 
-    // Debug logging with detailed revenue breakdown
-    const completedOrders = orders.filter(order => order.isCompleted === true)
-    const monthlyTotals = data.reduce((sum, month) => sum + month.revenue, 0)
     
-    console.log('📊 Monthly Revenue Analytics (Real Data):', {
-      restaurantId,
-      today: new Date().toISOString().split('T')[0],
-      dateRange: `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
-      totalOrders: orders.length,
-      completedOrders: completedOrders.length,
-      totalRevenue: totalRevenue,
-      monthlyTotalsSum: monthlyTotals,
-      revenueMismatch: totalRevenue !== monthlyTotals ? `⚠️ MISMATCH: ${totalRevenue} vs ${monthlyTotals}` : '✅ Match',
-      growthPercentage,
-      dataPoints: data.length,
-      firstMonth: data[0],
-      lastMonth: data[data.length - 1],
-      revenueByMonth: Object.keys(revenueByMonth).length > 0 ? revenueByMonth : 'No completed orders found',
-      orderDetails: orderDetails.length > 0 ? orderDetails : 'No completed orders',
-      monthlyBreakdown: data.map(month => ({ month: month.monthName, revenue: month.revenue }))
-    })
 
     return {
       totalRevenue,
@@ -159,6 +146,8 @@ export const generateSampleMonthlyRevenueData = (months: number = 6): MonthlyRev
 
   let totalRevenue = 0
 
+  // Weekly revenue will be calculated for the last month in the data array
+
   // Generate data for exactly N months
   for (let i = 0; i < months; i++) {
     const monthDate = new Date(startDate)
@@ -175,10 +164,15 @@ export const generateSampleMonthlyRevenueData = (months: number = 6): MonthlyRev
       year: 'numeric' 
     })
     
+    // Generate weekly revenue only for the LAST month (current month) in the data
+    const isLastMonth = i === months - 1
+    const weeklyRevenue = isLastMonth ? Math.round(revenue * (0.2 + Math.random() * 0.2)) : undefined
+    
     data.push({
       month: monthKey,
       monthName,
-      revenue
+      revenue,
+      weeklyRevenue
     })
     
     totalRevenue += revenue
@@ -194,21 +188,6 @@ export const generateSampleMonthlyRevenueData = (months: number = 6): MonthlyRev
     growthPercentage = ((lastQuarterRevenue - previousQuarterRevenue) / previousQuarterRevenue) * 100
   }
 
-  // Debug logging with detailed breakdown
-  const monthlyTotals = data.reduce((sum, month) => sum + month.revenue, 0)
-  
-  console.log('📊 Sample Monthly Revenue Data Generated:', {
-    today: new Date().toISOString().split('T')[0],
-    dateRange: `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
-    totalRevenue: totalRevenue,
-    monthlyTotalsSum: monthlyTotals,
-    revenueMismatch: totalRevenue !== monthlyTotals ? `⚠️ MISMATCH: ${totalRevenue} vs ${monthlyTotals}` : '✅ Match',
-    growthPercentage,
-    dataPoints: data.length,
-    firstMonth: data[0],
-    lastMonth: data[data.length - 1],
-    monthlyBreakdown: data.map(month => ({ month: month.monthName, revenue: month.revenue }))
-  })
 
   return {
     totalRevenue,
