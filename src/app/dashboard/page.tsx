@@ -9,7 +9,8 @@ import { Button } from '../../components/ui/button'
 import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2, DollarSign } from 'lucide-react'
 import { Timestamp } from 'firebase/firestore'
 import MonthlyRevenueBarChart from '../../components/charts/MonthlyRevenueBarChart'
-import { calculateMonthlyRevenueData, generateSampleMonthlyRevenueData, MonthlyRevenueStats } from '../../lib/monthly-revenue-analytics'
+import DailyRevenueAreaChart from '../../components/charts/DailyRevenueAreaChart'
+import { calculateMonthlyRevenueData, generateSampleMonthlyRevenueData, MonthlyRevenueStats, calculateDailyRevenueData, generateSampleDailyRevenueData, testSep11Detection, DailyRevenueStats } from '../../lib/monthly-revenue-analytics'
 
 interface DashboardStats {
   totalTables: number
@@ -39,6 +40,13 @@ export default function DashboardHome() {
     data: []
   })
   const [chartLoading, setChartLoading] = useState(true)
+
+  // Daily revenue chart state
+  const [dailyRevenueData, setDailyRevenueData] = useState<DailyRevenueStats>({
+    totalRevenue: 0,
+    data: []
+  })
+  const [dailyChartLoading, setDailyChartLoading] = useState(true)
 
   // Load dashboard statistics
   const loadDashboardStats = useCallback(async () => {
@@ -155,11 +163,58 @@ export default function DashboardHome() {
     }
   }, [user])
 
+  // Load daily revenue data
+  const loadDailyRevenueData = useCallback(async () => {
+    if (!user) return
+
+    try {
+      setDailyChartLoading(true)
+
+      // Get user's restaurant
+      const restaurants = await getUserRestaurants(user.uid)
+      if (restaurants.length === 0) {
+        // Use sample data if no restaurant found
+        const sampleData = generateSampleDailyRevenueData(14)
+        setDailyRevenueData(sampleData)
+        return
+      }
+
+      const restaurantId = restaurants[0].id
+
+      // Try to get real revenue data, fallback to sample data
+      try {
+        const revenueData = await calculateDailyRevenueData(restaurantId, 14)
+        
+        // Check if we got real data or if we need sample data
+        if (revenueData.totalRevenue > 0) {
+          setDailyRevenueData(revenueData)
+        } else {
+          const sampleData = generateSampleDailyRevenueData(14)
+          setDailyRevenueData(sampleData)
+        }
+      } catch (revenueError) {
+        console.error('❌ Error loading daily revenue data, using sample data:', revenueError)
+        const sampleData = generateSampleDailyRevenueData(14)
+        setDailyRevenueData(sampleData)
+      }
+    } catch (error) {
+      console.error('Error loading daily revenue data:', error)
+      const sampleData = generateSampleDailyRevenueData(14)
+      setDailyRevenueData(sampleData)
+    } finally {
+      setDailyChartLoading(false)
+    }
+  }, [user])
+
   // Load stats when component mounts or user changes
   useEffect(() => {
+    // Test September 11th detection
+    testSep11Detection()
+    
     loadDashboardStats()
     loadMonthlyRevenueData()
-  }, [loadDashboardStats, loadMonthlyRevenueData])
+    loadDailyRevenueData()
+  }, [loadDashboardStats, loadMonthlyRevenueData, loadDailyRevenueData])
 
   const quickActions = [
     {
@@ -261,7 +316,7 @@ export default function DashboardHome() {
         ))}
       </div>
 
-      {/* Monthly Revenue Chart - Half Width */}
+      {/* Revenue Charts - Side by Side */}
       <div className="mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Half - Monthly Revenue Chart */}
@@ -272,9 +327,12 @@ export default function DashboardHome() {
             />
           </div>
           
-          {/* Right Half - Empty Space */}
+          {/* Right Half - Daily Revenue Chart */}
           <div>
-            {/* Intentionally left empty as requested */}
+            <DailyRevenueAreaChart 
+              data={dailyRevenueData} 
+              loading={dailyChartLoading} 
+            />
           </div>
         </div>
       </div>
