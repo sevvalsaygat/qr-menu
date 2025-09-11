@@ -187,14 +187,9 @@ export default function DashboardHome() {
         
         // Check if we got real data or if we need sample data
         if (revenueData.totalRevenue > 0) {
-          console.log('📊 Using real daily revenue data:', revenueData.totalRevenue)
-          console.log('📊 Real data sample:', revenueData.data.slice(-3)) // Show last 3 days
           setDailyRevenueData(revenueData)
         } else {
-          console.log('📊 No real daily revenue data, using sample data')
           const sampleData = generateSampleDailyRevenueData(14)
-          console.log('📊 Sample data total:', sampleData.totalRevenue)
-          console.log('📊 Sample data sample:', sampleData.data.slice(-3)) // Show last 3 days
           setDailyRevenueData(sampleData)
         }
       } catch (revenueError) {

@@ -207,24 +207,7 @@ export const calculateDailyRevenueData = async (
       const dayRevenue = revenueByDay[dayKey] || 0
       totalRevenue += dayRevenue
       
-      // Debug: Log today's data and Sep 11 data
-      const today = new Date()
-      const isToday = dayDate.toDateString() === today.toDateString()
-      const isSep11 = dayDate.getMonth() === 8 && dayDate.getDate() === 11 // Month is 0-indexed
-      const isSep11ByName = dateName === "Sep 11"
-      
-      if (isToday || isSep11 || isSep11ByName) {
-        console.log('📊 Real data - Revenue:', { 
-          date: dayKey, 
-          dateName, 
-          revenue: dayRevenue, 
-          isToday, 
-          isSep11,
-          isSep11ByName,
-          dayDate: dayDate.toDateString(),
-          today: today.toDateString()
-        })
-      }
+      // Debug logging removed for production
       
       data.push({
         date: dayKey,
@@ -247,23 +230,7 @@ export const calculateDailyRevenueData = async (
 
 // Test function to verify September 11th detection
 export function testSep11Detection(): void {
-  const testDate = new Date(2024, 8, 11) // September 11, 2024 (month is 0-indexed)
-  const dateName = testDate.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric' 
-  })
-  
-  const isSep11 = testDate.getMonth() === 8 && testDate.getDate() === 11
-  const isSep11ByName = dateName === "Sep 11"
-  
-  console.log('🧪 Test Sep 11 Detection:', {
-    testDate: testDate.toDateString(),
-    dateName,
-    isSep11,
-    isSep11ByName,
-    month: testDate.getMonth(),
-    day: testDate.getDate()
-  })
+  // Test function - debug logging removed for production
 }
 
 /**
@@ -323,19 +290,7 @@ export const generateSampleDailyRevenueData = (days: number = 14): DailyRevenueS
       revenue
     })
     
-    // Debug: Log today's data and Sep 11 data
-    if (isToday || isSep11 || isSep11ByName) {
-      console.log('📊 Revenue data:', { 
-        date: dayKey, 
-        dateName, 
-        revenue, 
-        isToday, 
-        isSep11,
-        isSep11ByName,
-        dayDate: dayDate.toDateString(),
-        today: today.toDateString()
-      })
-    }
+    // Debug logging removed for production
     
     totalRevenue += revenue
   }
