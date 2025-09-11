@@ -95,7 +95,7 @@ export default function PasswordStrengthTooltip({
   const getProgressSteps = () => {
     const criteriaMet = [
       strength.criteria.minLength,
-      strength.criteria.hasLowercase && strength.criteria.hasUppercase,
+      strength.criteria.hasLowercase || strength.criteria.hasUppercase, // More flexible: either lowercase OR uppercase
       strength.criteria.hasNumbers,
       strength.criteria.hasSpecialChars
     ]
@@ -158,7 +158,7 @@ export default function PasswordStrengthTooltip({
     {
       key: 'case',
       label: 'Upper & lower case letters',
-      met: strength.criteria.hasLowercase && strength.criteria.hasUppercase
+      met: strength.criteria.hasLowercase || strength.criteria.hasUppercase // More flexible: either lowercase OR uppercase
     },
     {
       key: 'symbol',

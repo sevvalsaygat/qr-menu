@@ -118,7 +118,7 @@ export default function AuthPage() {
                 {isSignUp && password && (() => {
                   const criteriaMet = [
                     password.length >= 8,
-                    /[a-z]/.test(password) && /[A-Z]/.test(password),
+                    /[a-z]/.test(password) || /[A-Z]/.test(password), // More flexible: either lowercase OR uppercase
                     /\d/.test(password),
                     /[!@#$%^&*(),.?":{}|<>]/.test(password)
                   ]
