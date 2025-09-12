@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive } from '@/lib/firestore'
+import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder } from '@/lib/firestore'
 import { Restaurant, Order } from '@/types'
 import { Timestamp, FieldValue } from 'firebase/firestore'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
   Clock, 
   CheckCircle, 
@@ -17,12 +18,14 @@ import {
   Utensils,
   DollarSign,
   Users,
-  RefreshCw
+  RefreshCw,
+  XCircle
 } from 'lucide-react'
 
 interface OrderStats {
   activeCount: number
   completedCount: number
+  cancelledCount: number
   totalCount: number
   totalRevenue: number
 }
@@ -60,24 +63,29 @@ export default function OrdersPage() {
   const [stats, setStats] = useState<OrderStats>({
     activeCount: 0,
     completedCount: 0,
+    cancelledCount: 0,
     totalCount: 0,
     totalRevenue: 0
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set())
-  const [showCompleted, setShowCompleted] = useState(false)
+  const [orderFilter, setOrderFilter] = useState<'active' | 'completed' | 'cancelled'>('active')
   const [statsUpdating, setStatsUpdating] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [orderToCancel, setOrderToCancel] = useState<string | null>(null)
 
   // Calculate statistics from orders
   const calculateStats = useCallback((ordersList: Order[]): OrderStats => {
-    const activeOrders = ordersList.filter(order => !order.isCompleted)
-    const completedOrders = ordersList.filter(order => order.isCompleted)
+    const activeOrders = ordersList.filter(order => !order.isCompleted && !order.isCancelled)
+    const completedOrders = ordersList.filter(order => order.isCompleted && !order.isCancelled)
+    const cancelledOrders = ordersList.filter(order => order.isCancelled)
     const totalRevenue = completedOrders.reduce((sum, order) => sum + order.summary.total, 0)
 
     return {
       activeCount: activeOrders.length,
       completedCount: completedOrders.length,
+      cancelledCount: cancelledOrders.length,
       totalCount: ordersList.length,
       totalRevenue
     }
@@ -195,6 +203,84 @@ export default function OrdersPage() {
     }
   }
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (!restaurant) return
+
+    try {
+      setUpdatingOrders(prev => new Set(prev).add(orderId))
+      await cancelOrder(restaurant.id, orderId, 'restaurant')
+      
+      // Update the order locally for immediate UI feedback
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, isCancelled: true, cancelledBy: 'restaurant' as const }
+            : order
+        )
+      )
+      
+      // Also refresh from server to ensure consistency
+      await loadOrders()
+      
+      // Close the dialog
+      setCancelDialogOpen(false)
+      setOrderToCancel(null)
+    } catch (err) {
+      console.error('Error cancelling order:', err)
+      setError('Failed to cancel order.')
+      // Revert local changes on error
+      await loadOrders()
+    } finally {
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        return newSet
+      })
+    }
+  }
+
+  const openCancelDialog = (orderId: string) => {
+    setOrderToCancel(orderId)
+    setCancelDialogOpen(true)
+  }
+
+  const closeCancelDialog = () => {
+    setCancelDialogOpen(false)
+    setOrderToCancel(null)
+  }
+
+  const handleUncancelOrder = async (orderId: string) => {
+    if (!restaurant) return
+
+    try {
+      setUpdatingOrders(prev => new Set(prev).add(orderId))
+      await uncancelOrder(restaurant.id, orderId)
+      
+      // Update the order locally for immediate UI feedback
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, isCancelled: false, cancelledBy: undefined }
+            : order
+        )
+      )
+      
+      // Also refresh from server to ensure consistency
+      await loadOrders()
+    } catch (err) {
+      console.error('Error uncancelling order:', err)
+      setError('Failed to uncancel order.')
+      // Revert local changes on error
+      await loadOrders()
+    } finally {
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        return newSet
+      })
+    }
+  }
+
   useEffect(() => {
     loadRestaurant()
   }, [loadRestaurant])
@@ -241,10 +327,19 @@ export default function OrdersPage() {
     )
   }
 
-  // Filter orders for display based on showCompleted toggle
-  const displayedOrders = showCompleted 
-    ? orders.filter(order => order.isCompleted)
-    : orders.filter(order => !order.isCompleted)
+  // Filter orders for display based on filter
+  const displayedOrders = orders.filter(order => {
+    switch (orderFilter) {
+      case 'active':
+        return !order.isCompleted && !order.isCancelled
+      case 'completed':
+        return order.isCompleted && !order.isCancelled
+      case 'cancelled':
+        return order.isCancelled
+      default:
+        return false
+    }
+  })
 
   return (
     <div className="p-6 space-y-6">
@@ -269,7 +364,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard
           title="Active Orders"
           value={stats.activeCount}
@@ -283,6 +378,14 @@ export default function OrdersPage() {
           value={stats.completedCount}
           icon={CheckCircle}
           iconColor="text-green-500"
+          isUpdating={statsUpdating}
+        />
+        
+        <StatCard
+          title="Cancelled Orders"
+          value={stats.cancelledCount}
+          icon={XCircle}
+          iconColor="text-red-500"
           isUpdating={statsUpdating}
         />
         
@@ -306,18 +409,25 @@ export default function OrdersPage() {
       {/* Filter Toggle */}
       <div className="flex items-center gap-2">
         <Button
-          variant={!showCompleted ? 'default' : 'outline'}
-          onClick={() => setShowCompleted(false)}
+          variant={orderFilter === 'active' ? 'default' : 'outline'}
+          onClick={() => setOrderFilter('active')}
           size="sm"
         >
           Active Orders ({stats.activeCount})
         </Button>
         <Button
-          variant={showCompleted ? 'default' : 'outline'}
-          onClick={() => setShowCompleted(true)}
+          variant={orderFilter === 'completed' ? 'default' : 'outline'}
+          onClick={() => setOrderFilter('completed')}
           size="sm"
         >
           Completed Orders ({stats.completedCount})
+        </Button>
+        <Button
+          variant={orderFilter === 'cancelled' ? 'default' : 'outline'}
+          onClick={() => setOrderFilter('cancelled')}
+          size="sm"
+        >
+          Cancelled Orders ({stats.cancelledCount})
         </Button>
       </div>
 
@@ -327,13 +437,14 @@ export default function OrdersPage() {
           <CardContent className="p-12 text-center">
             <Utensils className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">
-              {showCompleted ? 'No completed orders yet' : 'No active orders'}
+              {orderFilter === 'active' && 'No active orders'}
+              {orderFilter === 'completed' && 'No completed orders yet'}
+              {orderFilter === 'cancelled' && 'No cancelled orders'}
             </h3>
             <p className="text-muted-foreground">
-              {showCompleted 
-                ? 'Completed orders will appear here.'
-                : 'New orders will appear here when customers place them using your QR codes.'
-              }
+              {orderFilter === 'active' && 'New orders will appear here when customers place them using your QR codes.'}
+              {orderFilter === 'completed' && 'Completed orders will appear here.'}
+              {orderFilter === 'cancelled' && 'Cancelled orders will appear here.'}
             </p>
           </CardContent>
         </Card>
@@ -347,8 +458,13 @@ export default function OrdersPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-full ${order.isCompleted ? 'bg-green-100' : 'bg-blue-100'}`}>
-                        {order.isCompleted ? (
+                      <div className={`p-2 rounded-full ${
+                        order.isCancelled ? 'bg-red-100' :
+                        order.isCompleted ? 'bg-green-100' : 'bg-blue-100'
+                      }`}>
+                        {order.isCancelled ? (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        ) : order.isCompleted ? (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         ) : (
                           <Clock className="h-4 w-4 text-blue-600" />
@@ -362,15 +478,34 @@ export default function OrdersPage() {
                           <span>Table {order.tableName}</span>
                           <span>•</span>
                           <span>{getTimeAgo(order.createdAt)}</span>
+                          {order.isCancelled && order.cancelledBy && (
+                            <>
+                              <span>•</span>
+                              <span>Cancelled by {order.cancelledBy}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <Badge variant={order.isCompleted ? 'secondary' : 'default'}>
-                        {order.isCompleted ? 'Completed' : 'Active'}
+                      <Badge variant={
+                        order.isCancelled ? 'destructive' :
+                        order.isCompleted ? 'secondary' : 'default'
+                      }>
+                        {order.isCancelled ? 'Cancelled' :
+                         order.isCompleted ? 'Completed' : 'Active'}
                       </Badge>
-                      {order.isCompleted ? (
+                      {order.isCancelled ? (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleUncancelOrder(order.id)}
+                          disabled={isUpdating}
+                        >
+                          Reactivate
+                        </Button>
+                      ) : order.isCompleted ? (
                         <Button 
                           variant="outline" 
                           size="sm" 
@@ -380,14 +515,24 @@ export default function OrdersPage() {
                           Reopen
                         </Button>
                       ) : (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleMarkAsCompleted(order.id)}
-                          disabled={isUpdating}
-                        >
-                          Mark Complete
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleMarkAsCompleted(order.id)}
+                            disabled={isUpdating}
+                          >
+                            Mark Complete
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => openCancelDialog(order.id)}
+                            disabled={isUpdating}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -435,6 +580,31 @@ export default function OrdersPage() {
           })}
         </div>
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this order? This action cannot be undone.
+              You can reactivate the order later if needed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeCancelDialog}>
+              Keep Order
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => orderToCancel && handleCancelOrder(orderToCancel)}
+              disabled={updatingOrders.has(orderToCancel || '')}
+            >
+              Cancel Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

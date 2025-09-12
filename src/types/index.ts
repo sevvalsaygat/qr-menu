@@ -144,6 +144,9 @@ export interface Order {
   customer?: CustomerInfo
   specialInstructions?: string
   isCompleted: boolean
+  isCancelled: boolean
+  cancelledAt?: Timestamp | FieldValue
+  cancelledBy?: 'customer' | 'restaurant'
   createdAt: Timestamp | FieldValue
 }
 

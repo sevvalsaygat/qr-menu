@@ -16,6 +16,7 @@ interface DashboardStats {
   totalTables: number
   menuItems: number
   todaysOrders: number
+  todaysCancelledOrders: number
   dailyRevenue: number
   totalRevenue: number
 }
@@ -27,6 +28,7 @@ export default function DashboardHome() {
     totalTables: 0,
     menuItems: 0,
     todaysOrders: 0,
+    todaysCancelledOrders: 0,
     dailyRevenue: 0,
     totalRevenue: 0
   })
@@ -63,6 +65,7 @@ export default function DashboardHome() {
           totalTables: 0,
           menuItems: 0,
           todaysOrders: 0,
+          todaysCancelledOrders: 0,
           dailyRevenue: 0,
           totalRevenue: 0
         })
@@ -89,6 +92,9 @@ export default function DashboardHome() {
         return orderDate.getTime() >= todayTimestamp
       })
 
+      // Calculate today's cancelled orders
+      const todaysCancelledOrders = todaysOrders.filter(order => order.isCancelled)
+
       // Calculate daily revenue (today's completed orders only)
       const todaysCompletedOrders = todaysOrders.filter(order => order.isCompleted)
       
@@ -107,6 +113,7 @@ export default function DashboardHome() {
         totalTables: tables.length,
         menuItems: products.length,
         todaysOrders: todaysOrders.length,
+        todaysCancelledOrders: todaysCancelledOrders.length,
         dailyRevenue: todaysRevenue,
         totalRevenue: totalRevenue
       })
@@ -291,29 +298,44 @@ export default function DashboardHome() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-        {statsDisplay.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {stat.label}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {loading ? (
-                      <Loader2 className="h-8 w-8 animate-spin" />
-                    ) : (
-                      stat.value
-                    )}
-                  </p>
+        {statsDisplay.map((stat, index) => {
+          const isTodaysOrders = stat.label === 'Today\'s Orders'
+          
+          return (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">
+                      {stat.label}
+                    </p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {loading ? (
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                      ) : (
+                        stat.value
+                      )}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-gray-100 rounded-full">
+                    <stat.icon className="h-6 w-6 text-gray-600" />
+                  </div>
                 </div>
-                <div className="p-3 bg-gray-100 rounded-full">
-                  <stat.icon className="h-6 w-6 text-gray-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                {isTodaysOrders && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs text-red-800">
+                      Today&apos;s Canceled Orders: {loading ? (
+                        <Loader2 className="h-3 w-3 animate-spin inline ml-1" />
+                      ) : (
+                        stats.todaysCancelledOrders
+                      )}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Revenue Charts - Side by Side */}
