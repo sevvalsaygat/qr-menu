@@ -437,6 +437,41 @@ export const markOrderAsActive = async (
   }
 }
 
+export const cancelOrder = async (
+  restaurantId: string, 
+  orderId: string,
+  cancelledBy: 'customer' | 'restaurant' = 'restaurant'
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    await updateDoc(orderRef, {
+      isCancelled: true,
+      cancelledAt: serverTimestamp(),
+      cancelledBy
+    })
+  } catch (error) {
+    console.error('Error cancelling order:', error)
+    throw new Error('Failed to cancel order')
+  }
+}
+
+export const uncancelOrder = async (
+  restaurantId: string, 
+  orderId: string
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    await updateDoc(orderRef, {
+      isCancelled: false,
+      cancelledAt: null,
+      cancelledBy: null
+    })
+  } catch (error) {
+    console.error('Error uncancelling order:', error)
+    throw new Error('Failed to uncancel order')
+  }
+}
+
 // Helper functions
 
 // Get products by specific category
