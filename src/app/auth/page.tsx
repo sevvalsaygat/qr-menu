@@ -20,10 +20,20 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [username, setUsername] = useState('')
   const [showPasswordTooltip, setShowPasswordTooltip] = useState(false)
+  const [passwordMatchError, setPasswordMatchError] = useState('')
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
+
+  const validatePasswordMatch = () => {
+    if (isSignUp && confirmPassword && password !== confirmPassword) {
+      setPasswordMatchError('Passwords do not match')
+    } else {
+      setPasswordMatchError('')
+    }
+  }
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -49,27 +59,27 @@ export default function AuthPage() {
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
-    const password = formData.get('password') as string
-    const confirmPassword = formData.get('confirmPassword') as string
+    const formPassword = formData.get('password') as string
+    const formConfirmPassword = formData.get('confirmPassword') as string
     const restaurantName = formData.get('restaurantName') as string
 
-    // Validate password confirmation for sign-up
-    if (isSignUp && password !== confirmPassword) {
-      setError('Passwords do not match')
+    // Validate password match for sign-up
+    if (isSignUp && formPassword !== formConfirmPassword) {
+      setPasswordMatchError('Passwords do not match')
       setSubmitting(false)
       return
     }
 
     try {
       if (isSignUp) {
-        const result = await signUp(email, password, restaurantName)
+        const result = await signUp(email, formPassword, restaurantName)
         if (result.success) {
           router.push('/dashboard')
         } else {
           setError(result.error || 'Failed to create account')
         }
       } else {
-        const result = await signIn(email, password)
+        const result = await signIn(email, formPassword)
         if (result.success) {
           router.push('/dashboard')
         } else {
@@ -178,7 +188,7 @@ export default function AuthPage() {
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
+                <div className="relative" style={{ position: 'relative' }}>
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
@@ -187,7 +197,11 @@ export default function AuthPage() {
                     required
                     disabled={submitting}
                     minLength={6}
-                    className="pr-10"
+                    className={`pr-10 ${passwordMatchError ? 'border-red-500' : ''}`}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onBlur={validatePasswordMatch}
+                    onFocus={() => setPasswordMatchError('')}
                   />
                   <Button
                     type="button"
@@ -203,6 +217,39 @@ export default function AuthPage() {
                       <Eye className="h-4 w-4 text-gray-500" />
                     )}
                   </Button>
+                  
+                  {/* Password Match Error Tooltip */}
+                  {passwordMatchError && (
+                    <div 
+                      className="absolute z-50 w-64 p-3 bg-red-50 border border-red-200 rounded-lg shadow-lg"
+                      style={{
+                        top: '50%',
+                        right: '100%',
+                        marginRight: '12px',
+                        transform: 'translateY(-50%)'
+                      }}
+                    >
+                      {/* Arrow pointing to the right (towards the input field) */}
+                      <div 
+                        className="absolute top-1/2 -right-2 w-0 h-0 border-t-8 border-b-8 border-l-8 border-transparent"
+                        style={{
+                          borderLeftColor: '#fef2f2',
+                          transform: 'translateY(-50%)'
+                        }}
+                      />
+                      <div 
+                        className="absolute top-1/2 -right-3 w-0 h-0 border-t-8 border-b-8 border-l-8 border-transparent"
+                        style={{
+                          borderLeftColor: '#fecaca',
+                          transform: 'translateY(-50%)'
+                        }}
+                      />
+                      
+                      <div className="text-sm text-red-700 font-medium">
+                        {passwordMatchError}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -255,8 +302,10 @@ export default function AuthPage() {
                 setShowPassword(false)
                 setShowConfirmPassword(false)
                 setPassword('')
+                setConfirmPassword('')
                 setUsername('')
                 setShowPasswordTooltip(false)
+                setPasswordMatchError('')
               }}
               className="text-sm text-blue-600 hover:text-blue-800 underline"
               disabled={submitting}
