@@ -127,7 +127,8 @@ function CustomerMenuPageContent() {
           tax,
           total,
           itemCount: orderItems.reduce((sum, item) => sum + item.quantity, 0)
-        }
+        },
+        isCancelled: false
       }
 
       // Only add special instructions if provided
