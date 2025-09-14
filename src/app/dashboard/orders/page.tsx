@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder } from '@/lib/firestore'
 import { Restaurant, Order } from '@/types'
@@ -12,6 +12,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { 
   Clock, 
   CheckCircle, 
   AlertCircle, 
@@ -19,8 +25,15 @@ import {
   DollarSign,
   Users,
   RefreshCw,
-  XCircle
+  XCircle,
+  Calendar,
+  CalendarDays
 } from 'lucide-react'
+import { 
+  groupOrdersByDate, 
+  groupOrdersByWeek, 
+  getDefaultAccordionValue
+} from '@/lib/date-utils'
 
 interface OrderStats {
   activeCount: number
@@ -56,6 +69,151 @@ function StatCard({ title, value, icon: Icon, iconColor, isUpdating }: StatCardP
   )
 }
 
+interface OrderCardProps {
+  order: Order
+  isUpdating: boolean
+  onMarkAsCompleted: (orderId: string) => void
+  onMarkAsActive: (orderId: string) => void
+  onCancelOrder: (orderId: string) => void
+  onUncancelOrder: (orderId: string) => void
+  getTimeAgo: (timestamp: Timestamp | FieldValue | null | undefined) => string
+}
+
+function OrderCard({ 
+  order, 
+  isUpdating, 
+  onMarkAsCompleted, 
+  onMarkAsActive, 
+  onCancelOrder, 
+  onUncancelOrder,
+  getTimeAgo 
+}: OrderCardProps) {
+  return (
+    <Card key={order.id} className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-full ${
+              order.isCancelled ? 'bg-red-100' :
+              order.isCompleted ? 'bg-green-100' : 'bg-blue-100'
+            }`}>
+              {order.isCancelled ? (
+                <XCircle className="h-4 w-4 text-red-600" />
+              ) : order.isCompleted ? (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              ) : (
+                <Clock className="h-4 w-4 text-blue-600" />
+              )}
+            </div>
+            <div>
+              <CardTitle className="text-lg">
+                Order #{order.id.slice(-6).toUpperCase()}
+              </CardTitle>
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                <span>Table {order.tableName}</span>
+                <span>•</span>
+                <span>{getTimeAgo(order.createdAt)}</span>
+                {order.isCancelled && order.cancelledBy && (
+                  <>
+                    <span>•</span>
+                    <span>Cancelled by {order.cancelledBy}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Badge variant={
+              order.isCancelled ? 'destructive' :
+              order.isCompleted ? 'secondary' : 'default'
+            }>
+              {order.isCancelled ? 'Cancelled' :
+               order.isCompleted ? 'Completed' : 'Active'}
+            </Badge>
+            {order.isCancelled ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onUncancelOrder(order.id)}
+                disabled={isUpdating}
+              >
+                Reactivate
+              </Button>
+            ) : order.isCompleted ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => onMarkAsActive(order.id)}
+                disabled={isUpdating}
+              >
+                Reopen
+              </Button>
+            ) : (
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => onMarkAsCompleted(order.id)}
+                  disabled={isUpdating}
+                >
+                  Mark Complete
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => onCancelOrder(order.id)}
+                  disabled={isUpdating}
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {/* Order Items */}
+        <div className="space-y-2 mb-4">
+          {order.items.map((item, index) => (
+            <div key={index} className="flex justify-between items-center py-1">
+              <div className="flex-1">
+                <span className="font-medium">{item.name}</span>
+                <span className="text-muted-foreground ml-2">×{item.quantity}</span>
+              </div>
+              <span className="font-medium">${item.subtotal.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+
+        <Separator className="my-4" />
+
+        {/* Order Summary */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+            <div className="flex items-center space-x-1">
+              <Users className="h-4 w-4" />
+              <span>{order.summary.itemCount} items</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold">${order.summary.total.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Special Instructions */}
+        {order.specialInstructions && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm font-medium text-yellow-800">Special Instructions:</p>
+            <p className="text-sm text-yellow-700 mt-1">{order.specialInstructions}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function OrdersPage() {
   const { user } = useAuth()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
@@ -74,6 +232,8 @@ export default function OrdersPage() {
   const [statsUpdating, setStatsUpdating] = useState(false)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null)
+  const [groupByWeek, setGroupByWeek] = useState(false)
+  const [accordionValue, setAccordionValue] = useState<string[]>([])
 
   // Calculate statistics from orders
   const calculateStats = useCallback((ordersList: Order[]): OrderStats => {
@@ -303,6 +463,32 @@ export default function OrdersPage() {
     return `${diffHours}h ${diffMinutes % 60}m ago`
   }
 
+  // Filter orders for display based on filter
+  const displayedOrders = useMemo(() => {
+    return orders.filter(order => {
+      switch (orderFilter) {
+        case 'active':
+          return !order.isCompleted && !order.isCancelled
+        case 'completed':
+          return order.isCompleted && !order.isCancelled
+        case 'cancelled':
+          return order.isCancelled
+        default:
+          return false
+      }
+    })
+  }, [orders, orderFilter])
+
+  // Group orders by date or week
+  const dateGroups = useMemo(() => groupOrdersByDate(displayedOrders), [displayedOrders])
+  const weekGroups = useMemo(() => groupOrdersByWeek(displayedOrders), [displayedOrders])
+
+  // Update accordion value when grouping changes or orders change
+  useEffect(() => {
+    const newValue = getDefaultAccordionValue(dateGroups, groupByWeek)
+    setAccordionValue(newValue)
+  }, [groupByWeek, dateGroups])
+
   if (loading) {
     return (
       <div className="p-6">
@@ -327,20 +513,6 @@ export default function OrdersPage() {
     )
   }
 
-  // Filter orders for display based on filter
-  const displayedOrders = orders.filter(order => {
-    switch (orderFilter) {
-      case 'active':
-        return !order.isCompleted && !order.isCancelled
-      case 'completed':
-        return order.isCompleted && !order.isCancelled
-      case 'cancelled':
-        return order.isCancelled
-      default:
-        return false
-    }
-  })
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -352,6 +524,27 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Grouping Toggle */}
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+            <Button
+              variant={!groupByWeek ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setGroupByWeek(false)}
+              className="h-8"
+            >
+              <Calendar className="h-4 w-4 mr-1" />
+              By Date
+            </Button>
+            <Button
+              variant={groupByWeek ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setGroupByWeek(true)}
+              className="h-8"
+            >
+              <CalendarDays className="h-4 w-4 mr-1" />
+              By Week
+            </Button>
+          </div>
           <Button
             variant="outline"
             onClick={loadOrders}
@@ -449,136 +642,117 @@ export default function OrdersPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {displayedOrders.map((order) => {
-            const isUpdating = updatingOrders.has(order.id)
-
-            return (
-              <Card key={order.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
+        <Accordion 
+          type="multiple" 
+          value={accordionValue} 
+          onValueChange={setAccordionValue}
+          className="space-y-2"
+        >
+          {groupByWeek ? (
+            // Week-based grouping
+            weekGroups.map((weekGroup) => (
+              <AccordionItem 
+                key={`week-${weekGroup.weekStart}`} 
+                value={`week-${weekGroup.weekStart}`}
+                className="border rounded-lg px-4"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
                     <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-full ${
-                        order.isCancelled ? 'bg-red-100' :
-                        order.isCompleted ? 'bg-green-100' : 'bg-blue-100'
-                      }`}>
-                        {order.isCancelled ? (
-                          <XCircle className="h-4 w-4 text-red-600" />
-                        ) : order.isCompleted ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Clock className="h-4 w-4 text-blue-600" />
-                        )}
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">
-                          Order #{order.id.slice(-6).toUpperCase()}
-                        </CardTitle>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <span>Table {order.tableName}</span>
-                          <span>•</span>
-                          <span>{getTimeAgo(order.createdAt)}</span>
-                          {order.isCancelled && order.cancelledBy && (
-                            <>
-                              <span>•</span>
-                              <span>Cancelled by {order.cancelledBy}</span>
-                            </>
-                          )}
+                      <CalendarDays className="h-5 w-5 text-muted-foreground" />
+                      <div className="text-left">
+                        <div className="font-semibold">{weekGroup.label}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {weekGroup.dateGroups.length} day{weekGroup.dateGroups.length !== 1 ? 's' : ''} • {weekGroup.dateGroups.reduce((sum, day) => sum + day.orders.length, 0)} orders
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={
-                        order.isCancelled ? 'destructive' :
-                        order.isCompleted ? 'secondary' : 'default'
-                      }>
-                        {order.isCancelled ? 'Cancelled' :
-                         order.isCompleted ? 'Completed' : 'Active'}
-                      </Badge>
-                      {order.isCancelled ? (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleUncancelOrder(order.id)}
-                          disabled={isUpdating}
-                        >
-                          Reactivate
-                        </Button>
-                      ) : order.isCompleted ? (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleMarkAsActive(order.id)}
-                          disabled={isUpdating}
-                        >
-                          Reopen
-                        </Button>
-                      ) : (
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleMarkAsCompleted(order.id)}
-                            disabled={isUpdating}
-                          >
-                            Mark Complete
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            onClick={() => openCancelDialog(order.id)}
-                            disabled={isUpdating}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
                     </div>
                   </div>
-                </CardHeader>
-
-                <CardContent>
-                  {/* Order Items */}
-                  <div className="space-y-2 mb-4">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center py-1">
-                        <div className="flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-muted-foreground ml-2">×{item.quantity}</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Accordion type="multiple" className="space-y-2">
+                    {weekGroup.dateGroups.map((dateGroup) => (
+                      <AccordionItem 
+                        key={`date-${dateGroup.date}`} 
+                        value={`date-${dateGroup.date}`}
+                        className="border rounded-lg px-4"
+                      >
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <div className="flex items-center space-x-3">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <div className="text-left">
+                                <div className="font-medium">{dateGroup.label}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {dateGroup.orders.length} order{dateGroup.orders.length !== 1 ? 's' : ''}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-4">
+                            {dateGroup.orders.map((order) => (
+                              <OrderCard
+                                key={order.id}
+                                order={order}
+                                isUpdating={updatingOrders.has(order.id)}
+                                onMarkAsCompleted={handleMarkAsCompleted}
+                                onMarkAsActive={handleMarkAsActive}
+                                onCancelOrder={openCancelDialog}
+                                onUncancelOrder={handleUncancelOrder}
+                                getTimeAgo={getTimeAgo}
+                              />
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </AccordionContent>
+              </AccordionItem>
+            ))
+          ) : (
+            // Date-based grouping
+            dateGroups.map((dateGroup) => (
+              <AccordionItem 
+                key={`date-${dateGroup.date}`} 
+                value={`date-${dateGroup.date}`}
+                className="border rounded-lg px-4"
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="h-5 w-5 text-muted-foreground" />
+                      <div className="text-left">
+                        <div className="font-semibold">{dateGroup.label}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {dateGroup.orders.length} order{dateGroup.orders.length !== 1 ? 's' : ''}
                         </div>
-                        <span className="font-medium">${item.subtotal.toFixed(2)}</span>
                       </div>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    {dateGroup.orders.map((order) => (
+                      <OrderCard
+                        key={order.id}
+                        order={order}
+                        isUpdating={updatingOrders.has(order.id)}
+                        onMarkAsCompleted={handleMarkAsCompleted}
+                        onMarkAsActive={handleMarkAsActive}
+                        onCancelOrder={openCancelDialog}
+                        onUncancelOrder={handleUncancelOrder}
+                        getTimeAgo={getTimeAgo}
+                      />
                     ))}
                   </div>
-
-                  <Separator className="my-4" />
-
-                  {/* Order Summary */}
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <div className="flex items-center space-x-1">
-                        <Users className="h-4 w-4" />
-                        <span>{order.summary.itemCount} items</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">${order.summary.total.toFixed(2)}</p>
-                    </div>
-                  </div>
-
-                  {/* Special Instructions */}
-                  {order.specialInstructions && (
-                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                      <p className="text-sm font-medium text-yellow-800">Special Instructions:</p>
-                      <p className="text-sm text-yellow-700 mt-1">{order.specialInstructions}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))
+          )}
+        </Accordion>
       )}
 
       {/* Cancel Confirmation Dialog */}
