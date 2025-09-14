@@ -556,76 +556,14 @@ export default function OrdersPage() {
             Manage orders from your restaurant
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Grouping Toggle */}
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-            <Button
-              variant={!groupByWeek ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setGroupByWeek(false)}
-              className="h-8"
-            >
-              <Calendar className="h-4 w-4 mr-1" />
-              By Date
-            </Button>
-            <Button
-              variant={groupByWeek ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setGroupByWeek(true)}
-              className="h-8"
-            >
-              <CalendarDays className="h-4 w-4 mr-1" />
-              By Week
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            onClick={loadOrders}
-            disabled={loading}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      <div className="relative">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by customer name, product name, or order number (use # for orders)..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onFocus={() => setShowSearchSuggestions(searchTerm.trim().length > 0)}
-            onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-            className="w-full pl-10 pr-10 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-          />
-          {searchTerm && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Search Suggestions */}
-        {showSearchSuggestions && searchSuggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-w-md">
-            {searchSuggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => handleSuggestionSelect(suggestion)}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-muted focus:bg-muted focus:outline-none first:rounded-t-md last:rounded-b-md"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        )}
+        <Button
+          variant="outline"
+          onClick={loadOrders}
+          disabled={loading}
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* Stats */}
@@ -669,6 +607,70 @@ export default function OrdersPage() {
           iconColor="text-yellow-500"
           isUpdating={statsUpdating}
         />
+      </div>
+
+      {/* Search and Date/Week Filters */}
+      <div className="flex items-center justify-between gap-4">
+        {/* Search Bar - Left Aligned */}
+        <div className="relative w-3/5">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by customer name, product name, or order number (use # for order number)..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={() => setShowSearchSuggestions(searchTerm.trim().length > 0)}
+              onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+              className="w-full pl-10 pr-10 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+            />
+            {searchTerm && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Search Suggestions */}
+          {showSearchSuggestions && searchSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50">
+              {searchSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSuggestionSelect(suggestion)}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted focus:bg-muted focus:outline-none first:rounded-t-md last:rounded-b-md"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Date/Week Filter Toggle - Right Aligned */}
+        <div className="flex items-center gap-3 bg-muted p-1 rounded-md">
+          <Button
+            variant={!groupByWeek ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setGroupByWeek(false)}
+            className="h-8"
+          >
+            <Calendar className="h-4 w-4 mr-1" />
+            By Date
+          </Button>
+          <Button
+            variant={groupByWeek ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setGroupByWeek(true)}
+            className="h-8"
+          >
+            <CalendarDays className="h-4 w-4 mr-1" />
+            By Week
+          </Button>
+        </div>
       </div>
 
       {/* Filter Toggle and Search Results */}
