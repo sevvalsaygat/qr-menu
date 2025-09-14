@@ -27,13 +27,16 @@ import {
   RefreshCw,
   XCircle,
   Calendar,
-  CalendarDays
+  CalendarDays,
+  Search,
+  X
 } from 'lucide-react'
 import { 
   groupOrdersByDate, 
   groupOrdersByWeek, 
   getDefaultAccordionValue
 } from '@/lib/date-utils'
+import { searchOrders, getSearchSuggestions } from '@/lib/search-utils'
 
 interface OrderStats {
   activeCount: number
@@ -234,6 +237,8 @@ export default function OrdersPage() {
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null)
   const [groupByWeek, setGroupByWeek] = useState(false)
   const [accordionValue, setAccordionValue] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
 
   // Calculate statistics from orders
   const calculateStats = useCallback((ordersList: Order[]): OrderStats => {
@@ -463,9 +468,10 @@ export default function OrdersPage() {
     return `${diffHours}h ${diffMinutes % 60}m ago`
   }
 
-  // Filter orders for display based on filter
+  // Filter and search orders for display
   const displayedOrders = useMemo(() => {
-    return orders.filter(order => {
+    // First filter by status
+    const filteredOrders = orders.filter(order => {
       switch (orderFilter) {
         case 'active':
           return !order.isCompleted && !order.isCancelled
@@ -477,7 +483,10 @@ export default function OrdersPage() {
           return false
       }
     })
-  }, [orders, orderFilter])
+
+    // Then apply search filter
+    return searchOrders(filteredOrders, searchTerm)
+  }, [orders, orderFilter, searchTerm])
 
   // Group orders by date or week
   const dateGroups = useMemo(() => groupOrdersByDate(displayedOrders), [displayedOrders])
@@ -488,6 +497,30 @@ export default function OrdersPage() {
     const newValue = getDefaultAccordionValue(dateGroups, groupByWeek)
     setAccordionValue(newValue)
   }, [groupByWeek, dateGroups])
+
+  // Generate search suggestions
+  const searchSuggestions = useMemo(() => {
+    if (!searchTerm.trim()) return []
+    return getSearchSuggestions(orders, searchTerm)
+  }, [orders, searchTerm])
+
+  // Handle search input changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setShowSearchSuggestions(value.trim().length > 0)
+  }
+
+  // Handle search suggestion selection
+  const handleSuggestionSelect = (suggestion: string) => {
+    setSearchTerm(suggestion)
+    setShowSearchSuggestions(false)
+  }
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchTerm('')
+    setShowSearchSuggestions(false)
+  }
 
   if (loading) {
     return (
@@ -556,6 +589,45 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="relative">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by customer name, product name, or order number (use # for orders)..."
+            value={searchTerm}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            onFocus={() => setShowSearchSuggestions(searchTerm.trim().length > 0)}
+            onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+            className="w-full pl-10 pr-10 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+          />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Search Suggestions */}
+        {showSearchSuggestions && searchSuggestions.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-50 max-w-md">
+            {searchSuggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleSuggestionSelect(suggestion)}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-muted focus:bg-muted focus:outline-none first:rounded-t-md last:rounded-b-md"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard
@@ -599,46 +671,81 @@ export default function OrdersPage() {
         />
       </div>
 
-      {/* Filter Toggle */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant={orderFilter === 'active' ? 'default' : 'outline'}
-          onClick={() => setOrderFilter('active')}
-          size="sm"
-        >
-          Active Orders ({stats.activeCount})
-        </Button>
-        <Button
-          variant={orderFilter === 'completed' ? 'default' : 'outline'}
-          onClick={() => setOrderFilter('completed')}
-          size="sm"
-        >
-          Completed Orders ({stats.completedCount})
-        </Button>
-        <Button
-          variant={orderFilter === 'cancelled' ? 'default' : 'outline'}
-          onClick={() => setOrderFilter('cancelled')}
-          size="sm"
-        >
-          Cancelled Orders ({stats.cancelledCount})
-        </Button>
+      {/* Filter Toggle and Search Results */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={orderFilter === 'active' ? 'default' : 'outline'}
+            onClick={() => setOrderFilter('active')}
+            size="sm"
+          >
+            Active Orders ({stats.activeCount})
+          </Button>
+          <Button
+            variant={orderFilter === 'completed' ? 'default' : 'outline'}
+            onClick={() => setOrderFilter('completed')}
+            size="sm"
+          >
+            Completed Orders ({stats.completedCount})
+          </Button>
+          <Button
+            variant={orderFilter === 'cancelled' ? 'default' : 'outline'}
+            onClick={() => setOrderFilter('cancelled')}
+            size="sm"
+          >
+            Cancelled Orders ({stats.cancelledCount})
+          </Button>
+        </div>
+        
+        {/* Search Results Indicator */}
+        {searchTerm && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Search className="h-4 w-4" />
+            <span>
+              {displayedOrders.length} result{displayedOrders.length !== 1 ? 's' : ''} found for &ldquo;{searchTerm}&rdquo;
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSearch}
+              className="h-6 px-2 text-xs"
+            >
+              Clear
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Orders List */}
       {displayedOrders.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
-            <Utensils className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">
-              {orderFilter === 'active' && 'No active orders'}
-              {orderFilter === 'completed' && 'No completed orders yet'}
-              {orderFilter === 'cancelled' && 'No cancelled orders'}
-            </h3>
-            <p className="text-muted-foreground">
-              {orderFilter === 'active' && 'New orders will appear here when customers place them using your QR codes.'}
-              {orderFilter === 'completed' && 'Completed orders will appear here.'}
-              {orderFilter === 'cancelled' && 'Cancelled orders will appear here.'}
-            </p>
+            {searchTerm ? (
+              <>
+                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">No orders found</h3>
+                <p className="text-muted-foreground mb-4">
+                  No orders match your search for &ldquo;{searchTerm}&rdquo;
+                </p>
+                <Button variant="outline" onClick={clearSearch}>
+                  Clear Search
+                </Button>
+              </>
+            ) : (
+              <>
+                <Utensils className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {orderFilter === 'active' && 'No active orders'}
+                  {orderFilter === 'completed' && 'No completed orders yet'}
+                  {orderFilter === 'cancelled' && 'No cancelled orders'}
+                </h3>
+                <p className="text-muted-foreground">
+                  {orderFilter === 'active' && 'New orders will appear here when customers place them using your QR codes.'}
+                  {orderFilter === 'completed' && 'Completed orders will appear here.'}
+                  {orderFilter === 'cancelled' && 'Cancelled orders will appear here.'}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
