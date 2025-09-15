@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../hooks/useAuth'
 import { getUserRestaurants, getTables, getProducts, getOrders } from '../../lib/firestore'
+import { collection, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore'
+import { db } from '../../lib/firebase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2, DollarSign } from 'lucide-react'
-import { Timestamp } from 'firebase/firestore'
 import MonthlyRevenueBarChart from '../../components/charts/MonthlyRevenueBarChart'
 import DailyRevenueAreaChart from '../../components/charts/DailyRevenueAreaChart'
 import { calculateMonthlyRevenueData, generateSampleMonthlyRevenueData, MonthlyRevenueStats, calculateDailyRevenueData, generateSampleDailyRevenueData, testSep11Detection, DailyRevenueStats } from '../../lib/monthly-revenue-analytics'
@@ -213,6 +214,38 @@ export default function DashboardHome() {
     }
   }, [user])
 
+  // Set up real-time order listeners
+  const setupRealtimeListeners = useCallback(async () => {
+    if (!user) return
+
+    try {
+      // Get user's restaurant
+      const restaurants = await getUserRestaurants(user.uid)
+      if (restaurants.length === 0) return
+
+      const restaurantId = restaurants[0].id
+
+      // Set up real-time listener for orders
+      const ordersQuery = query(
+        collection(db, 'restaurants', restaurantId, 'orders'),
+        orderBy('createdAt', 'desc')
+      )
+
+      const unsubscribe = onSnapshot(ordersQuery, () => {
+        // Reload dashboard stats and revenue data when orders change
+        loadDashboardStats()
+        loadDailyRevenueData()
+      }, (error) => {
+        console.error('Error setting up real-time order listener:', error)
+      })
+
+      // Return cleanup function
+      return unsubscribe
+    } catch (error) {
+      console.error('Error setting up real-time listeners:', error)
+    }
+  }, [user, loadDashboardStats, loadDailyRevenueData])
+
   // Load stats when component mounts or user changes
   useEffect(() => {
     // Test September 11th detection
@@ -221,7 +254,20 @@ export default function DashboardHome() {
     loadDashboardStats()
     loadMonthlyRevenueData()
     loadDailyRevenueData()
-  }, [loadDashboardStats, loadMonthlyRevenueData, loadDailyRevenueData])
+    
+    // Set up real-time listeners
+    let unsubscribe: (() => void) | undefined
+    setupRealtimeListeners().then((unsub) => {
+      unsubscribe = unsub
+    })
+
+    // Cleanup real-time listeners on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [loadDashboardStats, loadMonthlyRevenueData, loadDailyRevenueData, setupRealtimeListeners])
 
   const quickActions = [
     {

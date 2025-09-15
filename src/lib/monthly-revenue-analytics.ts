@@ -183,7 +183,12 @@ export const calculateDailyRevenueData = async (
     orders.forEach(order => {
       if (order.createdAt && order.summary?.total && order.isCompleted === true) {
         const orderDate = order.createdAt.toDate()
-        const dayKey = orderDate.toISOString().split('T')[0] // Format: "2024-01-15"
+        
+        // Use local date to avoid timezone issues
+        const year = orderDate.getFullYear()
+        const month = String(orderDate.getMonth() + 1).padStart(2, '0')
+        const day = String(orderDate.getDate()).padStart(2, '0')
+        const dayKey = `${year}-${month}-${day}` // Format: "2024-01-15"
         
         revenueByDay[dayKey] = (revenueByDay[dayKey] || 0) + order.summary.total
       }
@@ -198,7 +203,12 @@ export const calculateDailyRevenueData = async (
       const dayDate = new Date(startDate)
       dayDate.setDate(startDate.getDate() + i)
       
-      const dayKey = dayDate.toISOString().split('T')[0]
+      // Use local date to avoid timezone issues
+      const year = dayDate.getFullYear()
+      const month = String(dayDate.getMonth() + 1).padStart(2, '0')
+      const day = String(dayDate.getDate()).padStart(2, '0')
+      const dayKey = `${year}-${month}-${day}`
+      
       const dateName = dayDate.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric' 
@@ -206,8 +216,6 @@ export const calculateDailyRevenueData = async (
       
       const dayRevenue = revenueByDay[dayKey] || 0
       totalRevenue += dayRevenue
-      
-      // Debug logging removed for production
       
       data.push({
         date: dayKey,
@@ -254,26 +262,25 @@ export const generateSampleDailyRevenueData = (days: number = 14): DailyRevenueS
     const dayDate = new Date(startDate)
     dayDate.setDate(startDate.getDate() + i)
     
-    const dayKey = dayDate.toISOString().split('T')[0]
+    // Use local date to avoid timezone issues
+    const year = dayDate.getFullYear()
+    const month = String(dayDate.getMonth() + 1).padStart(2, '0')
+    const day = String(dayDate.getDate()).padStart(2, '0')
+    const dayKey = `${year}-${month}-${day}`
+    
     const dateName = dayDate.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
     })
     
-    // Check if this is today (September 11, 2024)
+    // Check if this is today
     const today = new Date()
     const isToday = dayDate.toDateString() === today.toDateString()
     
-    // Also check if this is September 11th specifically (for debugging)
-    const isSep11 = dayDate.getMonth() === 8 && dayDate.getDate() === 11 // Month is 0-indexed
-    
-    // Additional check: if the date string contains "Sep 11"
-    const isSep11ByName = dateName === "Sep 11"
-    
     let revenue: number
-    if (isToday || isSep11 || isSep11ByName) {
-      // Ensure today (or Sep 11) always has revenue (e.g., $100)
-      revenue = 100
+    if (isToday) {
+      // Ensure today always has some revenue for demo purposes
+      revenue = 150 + Math.random() * 200 // $150-$350 for today
     } else {
       // Generate realistic daily revenue data with weekend/weekday variation
       const baseRevenue = 100 + Math.random() * 400 // $100-$500 per day
@@ -289,8 +296,6 @@ export const generateSampleDailyRevenueData = (days: number = 14): DailyRevenueS
       dateName,
       revenue
     })
-    
-    // Debug logging removed for production
     
     totalRevenue += revenue
   }
