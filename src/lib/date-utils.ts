@@ -15,11 +15,15 @@ export interface WeekGroup {
 }
 
 /**
- * Get the date string in YYYY-MM-DD format
+ * Get the date string in YYYY-MM-DD format using local date
  */
 export function getDateString(timestamp: Timestamp | FieldValue | null | undefined): string {
   if (!timestamp || !(timestamp as Timestamp).toDate) return ''
-  return (timestamp as Timestamp).toDate().toISOString().split('T')[0]
+  const date = (timestamp as Timestamp).toDate()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -31,9 +35,9 @@ export function getDateLabel(dateString: string): string {
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
 
-  // Reset time to compare only dates
-  const todayStr = today.toISOString().split('T')[0]
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  // Use local date strings for comparison
+  const todayStr = getLocalDateString(today)
+  const yesterdayStr = getLocalDateString(yesterday)
 
   if (dateString === todayStr) {
     return 'Today'
@@ -47,6 +51,16 @@ export function getDateLabel(dateString: string): string {
       day: 'numeric'
     })
   }
+}
+
+/**
+ * Get local date string in YYYY-MM-DD format
+ */
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -135,7 +149,7 @@ export function groupOrdersByWeek(orders: Order[]): WeekGroup[] {
 
     const date = new Date(dateString)
     const weekStart = getWeekStart(date)
-    const weekStartString = weekStart.toISOString().split('T')[0]
+    const weekStartString = getLocalDateString(weekStart)
 
     if (!weekMap.has(weekStartString)) {
       weekMap.set(weekStartString, new Map())
@@ -152,7 +166,7 @@ export function groupOrdersByWeek(orders: Order[]): WeekGroup[] {
   const weekGroups: WeekGroup[] = Array.from(weekMap.entries())
     .map(([weekStartString, dateMap]) => {
       const weekEnd = getWeekEnd(new Date(weekStartString))
-      const weekEndString = weekEnd.toISOString().split('T')[0]
+      const weekEndString = getLocalDateString(weekEnd)
 
       // Convert date map to date groups
       const dateGroups: DateGroup[] = Array.from(dateMap.entries())
@@ -185,13 +199,15 @@ export function groupOrdersByWeek(orders: Order[]): WeekGroup[] {
 export function getDefaultAccordionValue(dateGroups: DateGroup[], useWeeks: boolean = false): string[] {
   if (useWeeks) {
     // For weeks, expand the current week
-    const today = new Date().toISOString().split('T')[0]
-    const currentWeekStart = getWeekStart(new Date(today)).toISOString().split('T')[0]
-    return [`week-${currentWeekStart}`]
+    const today = new Date()
+    const currentWeekStart = getWeekStart(today)
+    const currentWeekStartStr = getLocalDateString(currentWeekStart)
+    return [`week-${currentWeekStartStr}`]
   } else {
     // For dates, expand today if it exists
-    const today = new Date().toISOString().split('T')[0]
-    const todayGroup = dateGroups.find(group => group.date === today)
+    const today = new Date()
+    const todayStr = getLocalDateString(today)
+    const todayGroup = dateGroups.find(group => group.date === todayStr)
     return todayGroup ? [`date-${todayGroup.date}`] : []
   }
 }
