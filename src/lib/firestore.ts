@@ -402,9 +402,15 @@ export const createOrMergeOrderForTable = async (
         newItems.forEach((item) => {
           const prev = map.get(item.productId)
           if (prev) {
+            // Use the new item's price (most recent price) for the merged calculation
             const quantity = prev.quantity + item.quantity
-            const subtotal = prev.price * quantity
-            map.set(item.productId, { ...prev, quantity, subtotal })
+            const subtotal = item.price * quantity
+            map.set(item.productId, { 
+              ...prev, 
+              price: item.price, // Update to latest price
+              quantity, 
+              subtotal 
+            })
           } else {
             map.set(item.productId, { ...item })
           }
