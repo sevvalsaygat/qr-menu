@@ -11,7 +11,8 @@ import {
   orderBy, 
   limit,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { 
@@ -366,6 +367,105 @@ export const createOrder = async (
   } catch (error) {
     console.error('Error creating order:', error)
     throw new Error('Failed to create order')
+  }
+}
+
+// Create or merge an order for a table: if an active order exists (not completed/cancelled),
+// merge new items into it; otherwise create a new order. Prevents adding to closed tables by
+// relying on the caller to validate table is active (customer flow already does this).
+export const createOrMergeOrderForTable = async (
+  restaurantId: string,
+  orderData: Omit<Order, 'id' | 'restaurantId' | 'isCompleted' | 'createdAt'>
+): Promise<string> => {
+  try {
+    // Use a transaction to avoid race conditions when multiple additions occur concurrently
+    const resultId = await runTransaction(db, async (tx) => {
+      // Find existing active order for this table
+      const ordersCol = collection(db, 'restaurants', restaurantId, 'orders')
+      const activeQ = query(
+        ordersCol,
+        where('tableId', '==', orderData.tableId),
+        where('isCompleted', '==', false),
+        where('isCancelled', '==', false),
+        orderBy('createdAt', 'asc'),
+        limit(1)
+      )
+
+      const activeSnap = await getDocs(activeQ)
+
+      // Helper to merge items by productId, summing quantities and subtotals
+      const mergeItems = (existingItems: Order['items'], newItems: Order['items']) => {
+        const map = new Map<string, Order['items'][number]>()
+        existingItems.forEach((item) => {
+          map.set(item.productId, { ...item })
+        })
+        newItems.forEach((item) => {
+          const prev = map.get(item.productId)
+          if (prev) {
+            // Use the new item's price (most recent price) for the merged calculation
+            const quantity = prev.quantity + item.quantity
+            const subtotal = item.price * quantity
+            map.set(item.productId, { 
+              ...prev, 
+              price: item.price, // Update to latest price
+              quantity, 
+              subtotal 
+            })
+          } else {
+            map.set(item.productId, { ...item })
+          }
+        })
+        return Array.from(map.values())
+      }
+
+      if (!activeSnap.empty) {
+        // Merge into existing order
+        const docSnap = activeSnap.docs[0]
+        const existing = docSnap.data() as Order
+        const mergedItems = mergeItems(existing.items || [], orderData.items)
+        const itemCount = mergedItems.reduce((sum: number, it) => sum + (it.quantity || 0), 0)
+        const subtotal = mergedItems.reduce((sum: number, it) => sum + (it.subtotal || 0), 0)
+        const tax = 0
+        const total = subtotal + tax
+
+        const updatePayload: Partial<Order> = {
+          items: mergedItems,
+          summary: {
+            subtotal,
+            tax,
+            total,
+            itemCount
+          }
+        }
+
+        // If new special instructions provided, append to existing with a separator
+        if (orderData.specialInstructions) {
+          const combined = existing.specialInstructions
+            ? `${existing.specialInstructions}\n${orderData.specialInstructions}`
+            : orderData.specialInstructions
+          updatePayload.specialInstructions = combined
+        }
+
+        const orderRef = doc(db, 'restaurants', restaurantId, 'orders', docSnap.id)
+        tx.update(orderRef, updatePayload)
+        return docSnap.id
+      }
+
+      // Create a new order document
+      const newRef = doc(collection(db, 'restaurants', restaurantId, 'orders'))
+      tx.set(newRef, {
+        ...orderData,
+        restaurantId,
+        isCompleted: false,
+        createdAt: serverTimestamp()
+      })
+      return newRef.id
+    })
+
+    return resultId
+  } catch (error) {
+    console.error('Error creating or merging order:', error)
+    throw new Error('Failed to create or merge order')
   }
 }
 

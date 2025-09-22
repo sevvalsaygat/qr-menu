@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Restaurant, Table, Category, Product, OrderItem, Order } from '@/types'
-import { createOrder } from '@/lib/firestore'
+import { createOrMergeOrderForTable } from '@/lib/firestore'
 import { useCart } from '@/contexts/CartContext'
 import { CartProvider } from '@/contexts/CartContext'
 import { Card, CardContent } from '@/components/ui/card'
@@ -136,7 +136,7 @@ function CustomerMenuPageContent() {
         orderData.specialInstructions = customerInfo.specialInstructions
       }
 
-      const orderId = await createOrder(restaurantId, orderData)
+      const orderId = await createOrMergeOrderForTable(restaurantId, orderData)
 
       // Clear cart and show confirmation
       clearCart()

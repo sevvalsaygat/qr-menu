@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder } from '@/lib/firestore'
 import { Restaurant, Order } from '@/types'
-import { Timestamp, FieldValue } from 'firebase/firestore'
+import { Timestamp, FieldValue, onSnapshot, collection, query, orderBy } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -453,6 +454,21 @@ export default function OrdersPage() {
   useEffect(() => {
     if (restaurant) {
       loadOrders()
+
+      // Real-time updates for orders
+      const q = query(
+        collection(db, 'restaurants', restaurant.id, 'orders'),
+        orderBy('createdAt', 'desc')
+      )
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const next = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Order[]
+        setOrders(next)
+      }, (err) => {
+        console.error('Error listening to orders:', err)
+      })
+
+      return () => unsubscribe()
     }
   }, [restaurant, loadOrders])
 
