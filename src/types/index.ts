@@ -28,6 +28,7 @@ export interface AuthContextType {
   loading: boolean
   error: string | null
   isAuthenticated: boolean
+  refreshUserData: () => Promise<void>
 }
 
 // Restaurant types

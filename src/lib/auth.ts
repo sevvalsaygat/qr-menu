@@ -176,4 +176,24 @@ export const updateUserProfile = async (
   }
 }
 
+// Update user restaurant name
+export const updateUserRestaurantName = async (
+  userId: string,
+  restaurantName: string
+): Promise<ApiResponse> => {
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      restaurantName
+    }, { merge: true })
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating user restaurant name:', error)
+    return { 
+      success: false, 
+      error: 'Failed to update restaurant name' 
+    }
+  }
+}
+
 
