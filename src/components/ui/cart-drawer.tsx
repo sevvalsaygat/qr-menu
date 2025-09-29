@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { formatCurrency } from '@/lib/utils'
 
 interface CartDrawerProps {
   onCheckout?: (customerInfo: { specialInstructions?: string }) => void
@@ -26,6 +27,7 @@ interface CartDrawerProps {
 export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawerProps) {
   const { items, updateQuantity, removeFromCart, getTotalItems, getTotalPrice, isOpen, setIsOpen, isAnimating } = useCart()
   const [specialInstructions, setSpecialInstructions] = useState('')
+  const currencySymbol: '₺' | '$' | '€' = (typeof window !== 'undefined' && (window as unknown as { __qr_menu_currency?: '₺' | '$' | '€' }).__qr_menu_currency) || '$'
 
   const totalItems = getTotalItems()
   const totalPrice = getTotalPrice()
@@ -87,7 +89,7 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
                           <div className="flex-1">
                             <h3 className="font-medium">{item.product.name}</h3>
                             <p className="text-sm text-muted-foreground">
-                              ${item.product.price.toFixed(2)} each
+                              {formatCurrency(item.product.price, currencySymbol)} each
                             </p>
                           </div>
                           <Button
@@ -124,7 +126,7 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
                             </Button>
                           </div>
                           <p className="font-medium">
-                            ${(item.product.price * item.quantity).toFixed(2)}
+                            {formatCurrency(item.product.price * item.quantity, currencySymbol)}
                           </p>
                         </div>
                       </CardContent>
@@ -155,7 +157,7 @@ export function CartDrawer({ onCheckout, isCheckoutLoading = false }: CartDrawer
                 <div className="space-y-4 pb-8">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total ({totalItems} items)</span>
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span>{formatCurrency(totalPrice, currencySymbol)}</span>
                   </div>
                   
                   <Button

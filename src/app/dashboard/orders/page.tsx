@@ -38,6 +38,7 @@ import {
   getDefaultAccordionValue
 } from '@/lib/date-utils'
 import { searchOrders, getSearchSuggestions } from '@/lib/search-utils'
+import { formatCurrency } from '@/lib/utils'
 
 interface OrderStats {
   activeCount: number
@@ -81,6 +82,7 @@ interface OrderCardProps {
   onCancelOrder: (orderId: string) => void
   onUncancelOrder: (orderId: string) => void
   getTimeAgo: (timestamp: Timestamp | FieldValue | null | undefined) => string
+  currencySymbol: '₺' | '$' | '€'
 }
 
 function OrderCard({ 
@@ -90,7 +92,8 @@ function OrderCard({
   onMarkAsActive, 
   onCancelOrder, 
   onUncancelOrder,
-  getTimeAgo 
+  getTimeAgo,
+  currencySymbol
 }: OrderCardProps) {
   return (
     <Card key={order.id} className="hover:shadow-md transition-shadow">
@@ -186,7 +189,7 @@ function OrderCard({
                 <span className="font-medium">{item.name}</span>
                 <span className="text-muted-foreground ml-2">×{item.quantity}</span>
               </div>
-              <span className="font-medium">${item.subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatCurrency(item.subtotal, currencySymbol)}</span>
             </div>
           ))}
         </div>
@@ -202,7 +205,7 @@ function OrderCard({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-lg font-bold">${order.summary.total.toFixed(2)}</p>
+            <p className="text-lg font-bold">{formatCurrency(order.summary.total, currencySymbol)}</p>
           </div>
         </div>
 
@@ -221,6 +224,9 @@ function OrderCard({
 export default function OrdersPage() {
   const { user } = useAuth()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
+  const currencySymbol: '₺' | '$' | '€' = restaurant?.settings?.currency === '₺' || restaurant?.settings?.currency === '€' || restaurant?.settings?.currency === '$'
+    ? restaurant!.settings!.currency as '₺' | '$' | '€'
+    : '$'
   const [orders, setOrders] = useState<Order[]>([])
   const [stats, setStats] = useState<OrderStats>({
     activeCount: 0,
@@ -451,6 +457,31 @@ export default function OrdersPage() {
     loadRestaurant()
   }, [loadRestaurant])
 
+  // Listen for restaurant changes to update currency
+  useEffect(() => {
+    if (!user?.uid || !restaurant) return
+
+    const checkForRestaurantUpdates = async () => {
+      try {
+        const restaurants = await getUserRestaurants(user.uid)
+        if (restaurants.length > 0) {
+          const currentCurrency = restaurants[0].settings?.currency || '$'
+          const currentRestaurant = restaurants[0]
+          if (currentCurrency !== currencySymbol || currentRestaurant.id !== restaurant.id) {
+            setRestaurant(currentRestaurant)
+          }
+        }
+      } catch (err) {
+        console.error('Error checking restaurant updates:', err)
+      }
+    }
+
+    // Check for updates every 5 seconds
+    const interval = setInterval(checkForRestaurantUpdates, 5000)
+    
+    return () => clearInterval(interval)
+  }, [user?.uid, restaurant, currencySymbol])
+
   useEffect(() => {
     if (restaurant) {
       loadOrders()
@@ -618,7 +649,7 @@ export default function OrdersPage() {
         
         <StatCard
           title="Total Revenue"
-          value={`$${stats.totalRevenue.toFixed(2)}`}
+          value={formatCurrency(stats.totalRevenue, restaurant?.settings?.currency || '$')}
           icon={DollarSign}
           iconColor="text-yellow-500"
           isUpdating={statsUpdating}
@@ -827,6 +858,7 @@ export default function OrdersPage() {
                                 onCancelOrder={openCancelDialog}
                                 onUncancelOrder={handleUncancelOrder}
                                 getTimeAgo={getTimeAgo}
+                                currencySymbol={currencySymbol}
                               />
                             ))}
                           </div>
@@ -870,6 +902,7 @@ export default function OrdersPage() {
                         onCancelOrder={openCancelDialog}
                         onUncancelOrder={handleUncancelOrder}
                         getTimeAgo={getTimeAgo}
+                        currencySymbol={currencySymbol}
                       />
                     ))}
                   </div>

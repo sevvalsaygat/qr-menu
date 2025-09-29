@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { DollarSign, BarChart3 } from 'lucide-react'
 import { DailyRevenueStats } from '../../lib/monthly-revenue-analytics'
+import { formatCurrency } from '../../lib/utils'
 
 // Dynamically import ApexCharts to avoid SSR issues
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false })
@@ -12,9 +13,10 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false })
 interface DailyRevenueAreaChartProps {
   data: DailyRevenueStats
   loading?: boolean
+  currencySymbol?: string
 }
 
-export default function DailyRevenueAreaChart({ data, loading }: DailyRevenueAreaChartProps) {
+export default function DailyRevenueAreaChart({ data, loading, currencySymbol = '$' }: DailyRevenueAreaChartProps) {
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
@@ -95,9 +97,9 @@ export default function DailyRevenueAreaChart({ data, loading }: DailyRevenueAre
       labels: {
         formatter: function (val: number) {
           if (val >= 1000) {
-            return '$' + (val / 1000).toFixed(1) + 'k'
+            return currencySymbol + (val / 1000).toFixed(1) + 'k'
           }
-          return '$' + val.toFixed(0)
+          return currencySymbol + val.toFixed(0)
         },
         style: {
           colors: '#6b7280',
@@ -160,10 +162,7 @@ export default function DailyRevenueAreaChart({ data, loading }: DailyRevenueAre
             <div style="display: flex; align-items: center;">
               <div style="width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; margin-right: 8px;"></div>
               <span style="color: #6b7280;">Daily Revenue: </span>
-              <span style="font-weight: 600; color: #374151;">$${dailyRevenue.toLocaleString('en-US', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-              })}</span>
+              <span style="font-weight: 600; color: #374151;">${formatCurrency(dailyRevenue, currencySymbol)}</span>
             </div>
           </div>
         `
@@ -258,10 +257,7 @@ export default function DailyRevenueAreaChart({ data, loading }: DailyRevenueAre
             <DollarSign className="h-4 w-4 text-green-600" />
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                ${totalRevenue.toLocaleString('en-US', { 
-                  minimumFractionDigits: 2, 
-                  maximumFractionDigits: 2 
-                })}
+                {formatCurrency(totalRevenue, currencySymbol)}
               </p>
               <p className="text-sm text-gray-500">Total Revenue</p>
             </div>

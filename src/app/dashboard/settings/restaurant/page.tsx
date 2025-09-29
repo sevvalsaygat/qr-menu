@@ -12,12 +12,20 @@ import { getUserRestaurants, updateRestaurant } from '../../../../lib/firestore'
 import { updateUserRestaurantName } from '../../../../lib/auth'
 import { Restaurant } from '../../../../types'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip'
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../components/ui/select'
 
 export default function RestaurantEditPage() {
   const router = useRouter()
   const { user, refreshUserData } = useAuth()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [restaurantName, setRestaurantName] = useState('')
+  const [currency, setCurrency] = useState<'₺' | '$' | '€'>('$')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -36,6 +44,12 @@ export default function RestaurantEditPage() {
           const restaurantData = restaurants[0]
           setRestaurant(restaurantData)
           setRestaurantName(restaurantData.name)
+          const currentCurrency = restaurantData.settings?.currency || '$'
+          if (currentCurrency === '₺' || currentCurrency === '$' || currentCurrency === '€') {
+            setCurrency(currentCurrency)
+          } else {
+            setCurrency('$')
+          }
         } else {
           setError('No restaurant found. Please contact support.')
         }
@@ -50,7 +64,7 @@ export default function RestaurantEditPage() {
     loadRestaurant()
   }, [user?.uid])
 
-  // Handle saving restaurant name
+  // Handle saving restaurant info
   const handleSave = async () => {
     if (!restaurant || !restaurantName.trim() || !user?.uid) return
 
@@ -63,18 +77,22 @@ export default function RestaurantEditPage() {
       // Update both restaurant document and user document
       await Promise.all([
         updateRestaurant(restaurant.id, {
-          name: trimmedName
+          name: trimmedName,
+          settings: {
+            ...restaurant.settings,
+            currency
+          }
         }),
         updateUserRestaurantName(user.uid, trimmedName)
       ])
 
       // Update local state
-      setRestaurant(prev => prev ? { ...prev, name: trimmedName } : null)
+      setRestaurant(prev => prev ? { ...prev, name: trimmedName, settings: { ...prev.settings, currency } } : null)
       
       // Refresh user data to update sidebar and dashboard
       await refreshUserData()
       
-      setSuccess('Restaurant name updated successfully!')
+      setSuccess('Changes have been successfully updated!')
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000)
@@ -199,15 +217,34 @@ export default function RestaurantEditPage() {
               onChange={(e) => setRestaurantName(e.target.value)}
               placeholder="Enter restaurant name"
               maxLength={100}
-              className="max-w-md"
+              className="w-full max-w-md"
             />
+          </div>
+
+          {/* Currency Selection */}
+          <div className="space-y-2">
+            <Label>Currency</Label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as '₺' | '$' | '€')}>
+              <SelectTrigger className="w-full max-w-md">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="₺">₺</SelectItem>
+                <SelectItem value="$">$</SelectItem>
+                <SelectItem value="€">€</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Save Button */}
           <div className="flex space-x-4">
             <Button
               onClick={handleSave}
-              disabled={saving || !restaurantName.trim() || restaurantName === restaurant?.name}
+              disabled={
+                saving ||
+                !restaurantName.trim() ||
+                (restaurantName === restaurant?.name && currency === (restaurant?.settings?.currency || '$'))
+              }
               className="flex items-center space-x-2"
             >
               {saving ? (

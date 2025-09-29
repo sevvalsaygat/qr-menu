@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator'
 import { CartDrawer } from '@/components/ui/cart-drawer'
 import { Clock, Star, AlertCircle, Utensils, Plus } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { formatCurrency } from '@/lib/utils'
 
 function CustomerMenuPageContent() {
   const params = useParams()
@@ -153,6 +154,37 @@ function CustomerMenuPageContent() {
   useEffect(() => {
     loadMenuData()
   }, [loadMenuData])
+
+  // Listen for restaurant changes to update currency
+  useEffect(() => {
+    if (!restaurant) return
+
+    const checkForRestaurantUpdates = async () => {
+      try {
+        const restaurantDoc = await getDoc(doc(db, 'restaurants', restaurantId))
+        if (restaurantDoc.exists()) {
+          const restaurantData = { id: restaurantDoc.id, ...restaurantDoc.data() } as Restaurant
+          const currentCurrency = restaurantData.settings?.currency || '$'
+          const previousCurrency = restaurant.settings?.currency || '$'
+          
+          if (currentCurrency !== previousCurrency) {
+            setRestaurant(restaurantData)
+            // Update the global currency for cart drawer
+            if (typeof window !== 'undefined') {
+              (window as unknown as { __qr_menu_currency?: string }).__qr_menu_currency = currentCurrency
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking restaurant updates:', err)
+      }
+    }
+
+    // Check for updates every 5 seconds
+    const interval = setInterval(checkForRestaurantUpdates, 5000)
+    
+    return () => clearInterval(interval)
+  }, [restaurant, restaurantId])
 
   const getCategoryName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId)
@@ -293,7 +325,7 @@ function CustomerMenuPageContent() {
                     )}
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-green-600">
-                        ${product.price.toFixed(2)}
+                        {formatCurrency(product.price, restaurant?.settings?.currency || '$')}
                       </span>
                       {product.preparationTime && (
                         <div className="flex items-center text-sm text-gray-500">
@@ -357,7 +389,7 @@ function CustomerMenuPageContent() {
                   )}
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xl font-bold text-green-600">
-                      ${product.price.toFixed(2)}
+                      {formatCurrency(product.price, restaurant?.settings?.currency || '$')}
                     </span>
                     {product.preparationTime && (
                       <div className="flex items-center text-sm text-gray-500">
@@ -405,6 +437,11 @@ function CustomerMenuPageContent() {
         <CartDrawer 
           onCheckout={handleCheckout} 
           isCheckoutLoading={isCheckoutLoading}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__qr_menu_currency = ${JSON.stringify(restaurant?.settings?.currency || '$')};`
+          }}
         />
       </div>
     </div>

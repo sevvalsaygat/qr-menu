@@ -43,7 +43,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../components/ui/select'
-import { Plus, MoreHorizontal, Edit, Trash2, Package, Loader2, Eye, EyeOff, DollarSign, Filter, Search, X } from 'lucide-react'
+import { Plus, MoreHorizontal, Edit, Trash2, Package, Loader2, Eye, EyeOff, Filter, Search, X } from 'lucide-react'
+import { formatCurrency } from '../../../lib/utils'
 
 export default function ProductsPage() {
   const { user } = useAuth()
@@ -51,6 +52,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [restaurantId, setRestaurantId] = useState<string>('')
+  const [restaurantCurrency, setRestaurantCurrency] = useState<string>('$')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -88,7 +90,7 @@ export default function ProductsPage() {
         name: restaurantName,
         description: `Welcome to ${restaurantName}`,
         settings: {
-          currency: 'USD',
+          currency: '$',
           timezone: 'America/New_York',
           isActive: true
         }
@@ -119,6 +121,7 @@ export default function ProductsPage() {
       
       const restaurant = restaurants[0]
       setRestaurantId(restaurant.id)
+      setRestaurantCurrency(restaurant.settings?.currency || '$')
       
       // Load categories and products
       const [categoriesData, productsData] = await Promise.all([
@@ -142,6 +145,30 @@ export default function ProductsPage() {
       loadData()
     }
   }, [user, loadData])
+
+  // Listen for restaurant changes to update currency
+  useEffect(() => {
+    if (!user?.uid) return
+
+    const checkForRestaurantUpdates = async () => {
+      try {
+        const restaurants = await getUserRestaurants(user.uid)
+        if (restaurants.length > 0) {
+          const currentCurrency = restaurants[0].settings?.currency || '$'
+          if (currentCurrency !== restaurantCurrency) {
+            setRestaurantCurrency(currentCurrency)
+          }
+        }
+      } catch (err) {
+        console.error('Error checking restaurant updates:', err)
+      }
+    }
+
+    // Check for updates every 5 seconds
+    const interval = setInterval(checkForRestaurantUpdates, 5000)
+    
+    return () => clearInterval(interval)
+  }, [user?.uid, restaurantCurrency])
 
   // Handle URL search parameters for category filtering
   useEffect(() => {
@@ -725,8 +752,7 @@ export default function ProductsPage() {
                 <div className="space-y-2 text-sm text-gray-600">
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      ${product.price.toFixed(2)}
+                      {formatCurrency(product.price, restaurantCurrency)}
                     </span>
                     {product.preparationTime && (
                       <span>{product.preparationTime} min</span>
