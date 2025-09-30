@@ -11,6 +11,9 @@ export default function SettingsPage() {
   const handleEditRestaurantInfo = () => {
     router.push('/dashboard/settings/restaurant')
   }
+  const handleEditAccount = () => {
+    router.push('/dashboard/settings/user')
+  }
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -67,7 +70,7 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-600">
                 Update your email, password, and account security settings.
               </p>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleEditAccount}>
                 Edit Account
               </Button>
             </div>

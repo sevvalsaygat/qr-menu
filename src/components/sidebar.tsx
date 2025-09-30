@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, createContext, useContext } from 'react'
+import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '../hooks/useAuth'
 import { logOut } from '../lib/auth'
@@ -63,7 +64,7 @@ export function Sidebar({ className }: SidebarProps) {
   const { isCollapsed, setIsCollapsed } = useSidebar()
   const router = useRouter()
   const pathname = usePathname()
-  const { userData } = useAuth()
+  const { userData, user } = useAuth()
 
   const handleSignOut = async () => {
     const result = await logOut()
@@ -86,13 +87,29 @@ export function Sidebar({ className }: SidebarProps) {
       isCollapsed ? "w-16" : "w-56",
       className
     )}>
-      {/* Header with Restaurant Name and Collapse Toggle */}
+      {/* Header with Logo, Restaurant Name and Collapse Toggle */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        {!isCollapsed && (
-          <h1 className="text-lg font-semibold text-gray-900 truncate">
-            {userData?.restaurantName || 'QR Menu'}
-          </h1>
-        )}
+        <div className={cn('flex items-center', isCollapsed ? '' : 'space-x-3')}>
+          <div className="h-8 w-8 rounded-md bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+            {user?.photoURL ? (
+              <Image
+                src={user.photoURL}
+                alt="Logo"
+                width={32}
+                height={32}
+                className="object-cover h-full w-full"
+                unoptimized
+              />
+            ) : (
+              <span className="text-gray-300 text-xs">&nbsp;</span>
+            )}
+          </div>
+          {!isCollapsed && (
+            <h1 className="text-lg font-semibold text-gray-900 truncate">
+              {userData?.restaurantName || 'QR Menu'}
+            </h1>
+          )}
+        </div>
         <Button
           variant="ghost"
           size="sm"
