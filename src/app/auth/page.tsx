@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn, signUp } from '../../lib/auth'
 import { useAuth } from '../../hooks/useAuth'
@@ -24,6 +24,7 @@ export default function AuthPage() {
   const [username, setUsername] = useState('')
   const [showPasswordTooltip, setShowPasswordTooltip] = useState(false)
   const [passwordMatchError, setPasswordMatchError] = useState('')
+  const hideTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
 
@@ -151,12 +152,23 @@ export default function AuthPage() {
                   minLength={8}
                   className="pr-10"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onFocus={() => isSignUp && setShowPasswordTooltip(true)}
-                  onBlur={() => {
-                    // Delay hiding to allow clicking on tooltip
-                    setTimeout(() => setShowPasswordTooltip(false), 200)
-                  }}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => {
+                  if (!isSignUp) return
+                  if (hideTooltipTimeoutRef.current) {
+                    clearTimeout(hideTooltipTimeoutRef.current)
+                    hideTooltipTimeoutRef.current = null
+                  }
+                  setShowPasswordTooltip(true)
+                }}
+                onBlur={() => {
+                  if (!isSignUp) return
+                  // Delay hiding to allow clicking on tooltip
+                  hideTooltipTimeoutRef.current = setTimeout(() => {
+                    setShowPasswordTooltip(false)
+                    hideTooltipTimeoutRef.current = null
+                  }, 200)
+                }}
                 />
                 <Button
                   type="button"

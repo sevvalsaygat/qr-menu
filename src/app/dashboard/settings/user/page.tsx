@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateEmail as fbUpdateEmail, updatePassword as fbUpdatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
@@ -12,6 +12,8 @@ import { ArrowLeft, Save, User, Loader2, CheckCircle, Eye, EyeOff } from 'lucide
 import { useAuth } from '../../../../hooks/useAuth'
 import { db } from '../../../../lib/firebase'
 import { updateUserRestaurantName } from '../../../../lib/auth'
+import { calculatePasswordStrength } from '../../../../lib/password-strength'
+import PasswordStrengthTooltip from '../../../../components/ui/password-strength-tooltip'
 
 export default function UserSettingsPage() {
   const router = useRouter()
@@ -25,6 +27,9 @@ export default function UserSettingsPage() {
   const [isPasswordVerified, setIsPasswordVerified] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showPasswordTooltip, setShowPasswordTooltip] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, isValid: false })
+  const hideTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -40,6 +45,26 @@ export default function UserSettingsPage() {
       setLoading(false)
     }
   }, [user?.uid, user?.email, userData?.restaurantName, userData?.email])
+
+  // Calculate password strength when new password changes
+  useEffect(() => {
+    if (newPassword) {
+      const strength = calculatePasswordStrength(newPassword, user?.email || undefined)
+      setPasswordStrength({ score: strength.score, isValid: strength.isValid })
+    } else {
+      setPasswordStrength({ score: 0, isValid: false })
+    }
+  }, [newPassword, user?.email])
+
+  // Cleanup any pending tooltip hide timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTooltipTimeoutRef.current) {
+        clearTimeout(hideTooltipTimeoutRef.current)
+        hideTooltipTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   const handleBack = () => {
     router.push('/dashboard/settings')
@@ -105,6 +130,9 @@ export default function UserSettingsPage() {
         if (trimmedNewPassword !== trimmedConfirm) {
           throw new Error('New password and confirmation do not match')
         }
+        if (!passwordStrength.isValid) {
+          throw new Error('Password does not meet security requirements. Please check the password strength meter.')
+        }
         updates.push(
           fbUpdatePassword(user, trimmedNewPassword).catch(() => {
             throw new Error('Failed to update password. You may need to re-login to change password.')
@@ -133,6 +161,8 @@ export default function UserSettingsPage() {
         setIsPasswordVerified(false)
         setShowNewPassword(false)
         setShowConfirmPassword(false)
+        setShowPasswordTooltip(false)
+        setPasswordStrength({ score: 0, isValid: false })
       }
       setTimeout(() => setSuccess(''), 3000)
     } catch (e: unknown) {
@@ -280,7 +310,24 @@ export default function UserSettingsPage() {
             <>
               <div className="space-y-2">
                 <Label htmlFor="new-password">New Password</Label>
-                <div className="relative w-full max-w-md">
+                <div className="relative w-full max-w-md" style={{ position: 'relative' }}>
+                  {/* Strong indicator - appears on the right when all criteria are met */}
+                  {newPassword && (() => {
+                    const criteriaMet = [
+                      newPassword.length >= 8,
+                      /[a-z]/.test(newPassword) || /[A-Z]/.test(newPassword), // More flexible: either lowercase OR uppercase
+                      /\d/.test(newPassword),
+                      /[!@#$%^&*(),.?":{}|<>]/.test(newPassword)
+                    ]
+                    const allCriteriaMet = criteriaMet.every(Boolean)
+                    
+                    return allCriteriaMet ? (
+                      <div className="absolute right-12 top-1/2 transform -translate-y-1/2 z-10">
+                        <span className="text-green-800 font-semibold text-sm">Strong</span>
+                      </div>
+                    ) : null
+                  })()}
+                  
                   <Input
                     id="new-password"
                     type={showNewPassword ? 'text' : 'password'}
@@ -288,6 +335,20 @@ export default function UserSettingsPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
                     className="pr-10"
+                    onFocus={() => {
+                      if (hideTooltipTimeoutRef.current) {
+                        clearTimeout(hideTooltipTimeoutRef.current)
+                        hideTooltipTimeoutRef.current = null
+                      }
+                      setShowPasswordTooltip(true)
+                    }}
+                    onBlur={() => {
+                      // Delay hiding to allow clicking on tooltip
+                      hideTooltipTimeoutRef.current = setTimeout(() => {
+                        setShowPasswordTooltip(false)
+                        hideTooltipTimeoutRef.current = null
+                      }, 200)
+                    }}
                   />
                   <button
                     type="button"
@@ -297,6 +358,15 @@ export default function UserSettingsPage() {
                   >
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
+                  
+                  {/* Password Strength Tooltip */}
+                  <PasswordStrengthTooltip
+                    password={newPassword}
+                    username={user?.email || undefined}
+                    isVisible={showPasswordTooltip}
+                    placement="right"
+                    onClose={() => setShowPasswordTooltip(false)}
+                  />
                 </div>
               </div>
 
@@ -334,7 +404,8 @@ export default function UserSettingsPage() {
               disabled={
                 saving ||
                 (!businessName.trim() && !email.trim() && !(isPasswordVerified && !!newPassword.trim() && !!confirmPassword.trim())) ||
-                (isPasswordVerified && !!newPassword && !!confirmPassword && newPassword !== confirmPassword)
+                (isPasswordVerified && !!newPassword && !!confirmPassword && newPassword !== confirmPassword) ||
+                (isPasswordVerified && !!newPassword && !passwordStrength.isValid)
               }
               className="flex items-center space-x-2"
             >
