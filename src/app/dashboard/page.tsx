@@ -9,6 +9,7 @@ import { db } from '../../lib/firebase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2, DollarSign } from 'lucide-react'
+import { formatCurrency } from '../../lib/utils'
 import MonthlyRevenueBarChart from '../../components/charts/MonthlyRevenueBarChart'
 import DailyRevenueAreaChart from '../../components/charts/DailyRevenueAreaChart'
 import { calculateMonthlyRevenueData, generateSampleMonthlyRevenueData, MonthlyRevenueStats, calculateDailyRevenueData, generateSampleDailyRevenueData, testSep11Detection, DailyRevenueStats } from '../../lib/monthly-revenue-analytics'
@@ -50,6 +51,7 @@ export default function DashboardHome() {
     data: []
   })
   const [dailyChartLoading, setDailyChartLoading] = useState(true)
+  const [restaurantCurrency, setRestaurantCurrency] = useState<string>('$')
 
   // Load dashboard statistics
   const loadDashboardStats = useCallback(async () => {
@@ -75,6 +77,7 @@ export default function DashboardHome() {
       }
 
       const restaurantId = restaurants[0].id
+      setRestaurantCurrency(restaurants[0].settings?.currency || '$')
 
       // Fetch all data in parallel
       const [tables, products, orders] = await Promise.all([
@@ -246,6 +249,30 @@ export default function DashboardHome() {
     }
   }, [user, loadDashboardStats, loadDailyRevenueData])
 
+  // Listen for restaurant changes to update currency
+  useEffect(() => {
+    if (!user?.uid) return
+
+    const checkForRestaurantUpdates = async () => {
+      try {
+        const restaurants = await getUserRestaurants(user.uid)
+        if (restaurants.length > 0) {
+          const currentCurrency = restaurants[0].settings?.currency || '$'
+          if (currentCurrency !== restaurantCurrency) {
+            setRestaurantCurrency(currentCurrency)
+          }
+        }
+      } catch (err) {
+        console.error('Error checking restaurant updates:', err)
+      }
+    }
+
+    // Check for updates every 5 seconds
+    const interval = setInterval(checkForRestaurantUpdates, 5000)
+    
+    return () => clearInterval(interval)
+  }, [user?.uid, restaurantCurrency])
+
   // Load stats when component mounts or user changes
   useEffect(() => {
     // Test September 11th detection
@@ -304,8 +331,8 @@ export default function DashboardHome() {
     { label: 'Total Tables', value: stats.totalTables.toString(), icon: QrCode },
     { label: 'Menu Items', value: stats.menuItems.toString(), icon: ShoppingBag },
     { label: 'Today\'s Orders', value: stats.todaysOrders.toString(), icon: Users },
-    { label: 'Daily Revenue', value: `$${stats.dailyRevenue.toFixed(2)}`, icon: DollarSign },
-    { label: 'Total Revenue', value: `$${stats.totalRevenue.toFixed(2)}`, icon: BarChart3 }
+    { label: 'Daily Revenue', value: formatCurrency(stats.dailyRevenue, restaurantCurrency), icon: DollarSign },
+    { label: 'Total Revenue', value: formatCurrency(stats.totalRevenue, restaurantCurrency), icon: BarChart3 }
   ]
 
   return (
@@ -391,7 +418,8 @@ export default function DashboardHome() {
           <div>
             <MonthlyRevenueBarChart 
               data={monthlyRevenueData} 
-              loading={chartLoading} 
+              loading={chartLoading}
+              currencySymbol={restaurantCurrency}
             />
           </div>
           
@@ -399,7 +427,8 @@ export default function DashboardHome() {
           <div>
             <DailyRevenueAreaChart 
               data={dailyRevenueData} 
-              loading={dailyChartLoading} 
+              loading={dailyChartLoading}
+              currencySymbol={restaurantCurrency}
             />
           </div>
         </div>

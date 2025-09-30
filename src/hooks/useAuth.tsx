@@ -20,6 +20,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Function to refresh user data
+  const refreshUserData = async () => {
+    if (!user) return
+    
+    try {
+      const data = await getUserData(user.uid)
+      setUserData(data)
+    } catch (err) {
+      console.error('Error refreshing user data:', err)
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser: User | null) => {
       try {
@@ -55,7 +67,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     userData,
     loading,
     error,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    refreshUserData
   }
 
   return (

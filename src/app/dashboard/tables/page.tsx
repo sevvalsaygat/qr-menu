@@ -106,7 +106,7 @@ export default function TablesPage() {
         name: restaurantName,
         description: `Welcome to ${restaurantName}`,
         settings: {
-          currency: 'USD',
+          currency: '$',
           timezone: 'America/New_York',
           isActive: true
         }

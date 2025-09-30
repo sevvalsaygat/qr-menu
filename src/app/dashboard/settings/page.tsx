@@ -1,10 +1,19 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { Settings as SettingsIcon, User, Building, Bell, Shield } from 'lucide-react'
 
 export default function SettingsPage() {
+  const router = useRouter()
+
+  const handleEditRestaurantInfo = () => {
+    router.push('/dashboard/settings/restaurant')
+  }
+  const handleEditAccount = () => {
+    router.push('/dashboard/settings/user')
+  }
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -34,7 +43,11 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-600">
                 Manage your restaurant name, address, contact information, and operating hours.
               </p>
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleEditRestaurantInfo}
+              >
                 Edit Restaurant Info
               </Button>
             </div>
@@ -57,7 +70,7 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-600">
                 Update your email, password, and account security settings.
               </p>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={handleEditAccount}>
                 Edit Account
               </Button>
             </div>

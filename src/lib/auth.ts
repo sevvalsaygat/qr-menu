@@ -39,7 +39,7 @@ export const signUp = async (
         name: restaurantName,
         description: `Welcome to ${restaurantName}`,
         settings: {
-          currency: 'USD',
+          currency: '$',
           timezone: 'America/New_York',
           isActive: true
         }
@@ -172,6 +172,26 @@ export const updateUserProfile = async (
     return { 
       success: false, 
       error: 'Failed to update profile' 
+    }
+  }
+}
+
+// Update user restaurant name
+export const updateUserRestaurantName = async (
+  userId: string,
+  restaurantName: string
+): Promise<ApiResponse> => {
+  try {
+    await setDoc(doc(db, 'users', userId), {
+      restaurantName
+    }, { merge: true })
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating user restaurant name:', error)
+    return { 
+      success: false, 
+      error: 'Failed to update restaurant name' 
     }
   }
 }

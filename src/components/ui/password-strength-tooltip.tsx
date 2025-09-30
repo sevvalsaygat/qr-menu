@@ -9,13 +9,15 @@ interface PasswordStrengthTooltipProps {
   username?: string
   isVisible: boolean
   onClose: () => void
+  placement?: 'left' | 'right'
 }
 
 export default function PasswordStrengthTooltip({ 
   password, 
   username, 
   isVisible,
-  onClose
+  onClose,
+  placement = 'left'
 }: PasswordStrengthTooltipProps) {
   const [strength, setStrength] = useState<PasswordStrengthResult>({
     score: 0,
@@ -172,6 +174,23 @@ export default function PasswordStrengthTooltip({
     }
   ]
 
+  // Compute side-specific styles
+  const sideStyles = placement === 'right'
+    ? {
+        containerPos: { left: '100%', marginLeft: '12px' } as const,
+        arrowOuterClass: 'absolute top-1/2 -left-2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent',
+        arrowOuterStyle: { borderRightColor: '#ffffff', transform: 'translateY(-50%)' } as const,
+        arrowInnerClass: 'absolute top-1/2 -left-3 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent',
+        arrowInnerStyle: { borderRightColor: '#e5e7eb', transform: 'translateY(-50%)' } as const
+      }
+    : {
+        containerPos: { right: '100%', marginRight: '12px' } as const,
+        arrowOuterClass: 'absolute top-1/2 -right-2 w-0 h-0 border-t-8 border-b-8 border-l-8 border-transparent',
+        arrowOuterStyle: { borderLeftColor: '#ffffff', transform: 'translateY(-50%)' } as const,
+        arrowInnerClass: 'absolute top-1/2 -right-3 w-0 h-0 border-t-8 border-b-8 border-l-8 border-transparent',
+        arrowInnerStyle: { borderLeftColor: '#e5e7eb', transform: 'translateY(-50%)' } as const
+      }
+
   return (
     <div
       ref={tooltipRef}
@@ -180,8 +199,7 @@ export default function PasswordStrengthTooltip({
       }`}
       style={{
         top: '50%',
-        right: '100%',
-        marginRight: '12px',
+        ...sideStyles.containerPos,
         transform: isClosing ? 'translateY(-50%) scale(0.95)' : 'translateY(-50%) scale(1)',
         maxHeight: '400px',
         overflowY: 'auto'
@@ -189,18 +207,12 @@ export default function PasswordStrengthTooltip({
     >
       {/* Arrow pointing to the right (towards password field) */}
       <div 
-        className="absolute top-1/2 -right-2 w-0 h-0 border-t-8 border-b-8 border-l-8 border-transparent"
-        style={{
-          borderLeftColor: '#ffffff',
-          transform: 'translateY(-50%)'
-        }}
+        className={sideStyles.arrowOuterClass}
+        style={sideStyles.arrowOuterStyle}
       />
       <div 
-        className="absolute top-1/2 -right-3 w-0 h-0 border-t-8 border-b-8 border-l-8 border-transparent"
-        style={{
-          borderLeftColor: '#e5e7eb',
-          transform: 'translateY(-50%)'
-        }}
+        className={sideStyles.arrowInnerClass}
+        style={sideStyles.arrowInnerStyle}
       />
       
       {/* Title */}
