@@ -11,7 +11,6 @@ import { Label } from '../../../../components/ui/label'
 import { ArrowLeft, Save, User, Loader2, CheckCircle, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../../../hooks/useAuth'
 import { db } from '../../../../lib/firebase'
-import { updateUserRestaurantName } from '../../../../lib/auth'
 import { calculatePasswordStrength } from '../../../../lib/password-strength'
 import PasswordStrengthTooltip from '../../../../components/ui/password-strength-tooltip'
 
@@ -19,7 +18,6 @@ export default function UserSettingsPage() {
   const router = useRouter()
   const { user, userData, refreshUserData } = useAuth()
 
-  const [businessName, setBusinessName] = useState('')
   const [email, setEmail] = useState('')
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -39,12 +37,11 @@ export default function UserSettingsPage() {
     setLoading(true)
     setError('')
     try {
-      setBusinessName(userData?.restaurantName || '')
       setEmail(user?.email || userData?.email || '')
     } finally {
       setLoading(false)
     }
-  }, [user?.uid, user?.email, userData?.restaurantName, userData?.email])
+  }, [user?.uid, user?.email, userData?.email])
 
   // Calculate password strength when new password changes
   useEffect(() => {
@@ -92,7 +89,6 @@ export default function UserSettingsPage() {
 
   const handleSave = async () => {
     if (!user?.uid) return
-    const trimmedBusiness = businessName.trim()
     const trimmedEmail = email.trim()
     const trimmedNewPassword = newPassword.trim()
     const trimmedConfirm = confirmPassword.trim()
@@ -104,10 +100,6 @@ export default function UserSettingsPage() {
 
       const updates: Array<Promise<unknown>> = []
       let didChangePassword = false
-
-      if (trimmedBusiness && trimmedBusiness !== userData?.restaurantName) {
-        updates.push(updateUserRestaurantName(user.uid, trimmedBusiness))
-      }
 
       if (trimmedEmail && trimmedEmail !== (user.email || '')) {
         // Update Firebase Auth email first
@@ -144,8 +136,7 @@ export default function UserSettingsPage() {
       // Always ensure Firestore user doc reflects latest fields
       updates.push(
         setDoc(doc(db, 'users', user.uid), {
-          email: trimmedEmail || user.email || '',
-          restaurantName: trimmedBusiness || userData?.restaurantName || ''
+          email: trimmedEmail || user.email || ''
         }, { merge: true })
       )
 
@@ -252,24 +243,10 @@ export default function UserSettingsPage() {
             <span>Account Information</span>
           </CardTitle>
           <CardDescription>
-            Update your business name and email
+            Update your email address
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="business-name">Business Name</Label>
-            <Input
-              id="business-name"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              placeholder="Enter business name"
-              maxLength={100}
-              className="w-full max-w-md"
-            />
-          </div>
-
-          
-
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -403,7 +380,7 @@ export default function UserSettingsPage() {
               onClick={handleSave}
               disabled={
                 saving ||
-                (!businessName.trim() && !email.trim() && !(isPasswordVerified && !!newPassword.trim() && !!confirmPassword.trim())) ||
+                (!email.trim() && !(isPasswordVerified && !!newPassword.trim() && !!confirmPassword.trim())) ||
                 (isPasswordVerified && !!newPassword && !!confirmPassword && newPassword !== confirmPassword) ||
                 (isPasswordVerified && !!newPassword && !passwordStrength.isValid)
               }
