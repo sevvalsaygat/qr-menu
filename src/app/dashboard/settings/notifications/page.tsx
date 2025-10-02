@@ -8,8 +8,9 @@ import { Switch } from '../../../../components/ui/switch'
 import { Label } from '../../../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select'
 import { Separator } from '../../../../components/ui/separator'
-import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX } from 'lucide-react'
+import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX, Clock } from 'lucide-react'
 import { useAuth } from '../../../../hooks/useAuth'
+import { useNotificationSettings } from '../../../../contexts/NotificationSettingsContext'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../../../../lib/firebase'
 
@@ -31,6 +32,7 @@ interface NotificationSettings {
 export default function NotificationSettingsPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { isInQuietHours } = useNotificationSettings()
   const [settings, setSettings] = useState<NotificationSettings>({
     soundNotifications: {
       newOrders: true,
@@ -300,8 +302,13 @@ export default function NotificationSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Bell className="h-5 w-5" />
+            <Clock className="h-5 w-5" />
             <span>Quiet Hours</span>
+            {settings.quietHours.enabled && isInQuietHours && (
+              <span className="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                Currently Active
+              </span>
+            )}
           </CardTitle>
           <CardDescription>
             Set times when you don&apos;t want to receive notifications

@@ -14,7 +14,7 @@ import { Plus, TestTube, RefreshCw } from 'lucide-react'
 export function TestOrderNotifications() {
   const { user } = useAuth()
   const { totalActiveOrders, pendingOrders, isLoading, error } = useOrderNotifications()
-  const { showOrderCount } = useNotificationSettings()
+  const { showOrderCount, isInQuietHours, settings } = useNotificationSettings()
   const [isCreating, setIsCreating] = useState(false)
   const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null)
 
@@ -63,7 +63,7 @@ export function TestOrderNotifications() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-800">{totalActiveOrders}</div>
             <div className="text-sm text-yellow-600">Active Orders</div>
@@ -77,6 +77,12 @@ export function TestOrderNotifications() {
               {showOrderCount ? 'ON' : 'OFF'}
             </div>
             <div className="text-sm text-yellow-600">Badge Display</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-yellow-800">
+              {isInQuietHours ? 'QUIET' : 'ACTIVE'}
+            </div>
+            <div className="text-sm text-yellow-600">Quiet Hours</div>
           </div>
         </div>
 
@@ -133,6 +139,12 @@ export function TestOrderNotifications() {
               <a href="/dashboard/settings/notifications">Notification Settings</a>
             </Button>
           </div>
+          {settings.quietHours.enabled && (
+            <div>
+              <strong>Quiet Hours:</strong> {settings.quietHours.startTime} - {settings.quietHours.endTime} 
+              {isInQuietHours && ' (Currently Active)'}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -25,6 +25,7 @@ interface NotificationSettingsContextType {
   isLoading: boolean
   error: string | null
   showOrderCount: boolean
+  isInQuietHours: boolean
 }
 
 const NotificationSettingsContext = createContext<NotificationSettingsContextType | undefined>(undefined)
@@ -49,9 +50,31 @@ export function NotificationSettingsProvider({ children }: { children: React.Rea
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
-  // Calculate whether to show order count based on push notification settings
-  const showOrderCount = settings.pushNotifications.newOrders
+  // Check if we're currently in quiet hours
+  const isInQuietHours = () => {
+    if (!settings.quietHours.enabled) return false
+    
+    const timeToCheck = currentTime
+    const currentTimeMinutes = timeToCheck.getHours() * 60 + timeToCheck.getMinutes() // Convert to minutes since midnight
+    
+    const [startHour, startMin] = settings.quietHours.startTime.split(':').map(Number)
+    const [endHour, endMin] = settings.quietHours.endTime.split(':').map(Number)
+    const startTime = startHour * 60 + startMin
+    const endTime = endHour * 60 + endMin
+    
+    // Handle quiet hours that span midnight (e.g., 22:00 to 08:00)
+    if (startTime > endTime) {
+      return currentTimeMinutes >= startTime || currentTimeMinutes <= endTime
+    }
+    
+    // Handle quiet hours within the same day (e.g., 14:00 to 16:00)
+    return currentTimeMinutes >= startTime && currentTimeMinutes <= endTime
+  }
+
+  // Calculate whether to show order count based on push notification settings and quiet hours
+  const showOrderCount = settings.pushNotifications.newOrders && !isInQuietHours()
 
   useEffect(() => {
     if (!user?.uid) {
@@ -96,11 +119,21 @@ export function NotificationSettingsProvider({ children }: { children: React.Rea
     return () => unsubscribe()
   }, [user?.uid])
 
+  // Update current time every minute to check quiet hours
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(timer)
+  }, [])
+
   const value: NotificationSettingsContextType = {
     settings,
     isLoading,
     error,
-    showOrderCount
+    showOrderCount,
+    isInQuietHours: isInQuietHours()
   }
 
   return (
