@@ -8,18 +8,12 @@ import { Switch } from '../../../../components/ui/switch'
 import { Label } from '../../../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select'
 import { Separator } from '../../../../components/ui/separator'
-import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX, Mail } from 'lucide-react'
+import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX } from 'lucide-react'
 import { useAuth } from '../../../../hooks/useAuth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../../../../lib/firebase'
 
 interface NotificationSettings {
-  emailNotifications: {
-    newOrders: boolean
-    orderUpdates: boolean
-    dailyReports: boolean
-    weeklyReports: boolean
-  }
   soundNotifications: {
     newOrders: boolean
     orderUpdates: boolean
@@ -41,12 +35,6 @@ export default function NotificationSettingsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [settings, setSettings] = useState<NotificationSettings>({
-    emailNotifications: {
-      newOrders: true,
-      orderUpdates: true,
-      dailyReports: false,
-      weeklyReports: false
-    },
     soundNotifications: {
       newOrders: true,
       orderUpdates: false,
@@ -125,15 +113,6 @@ export default function NotificationSettingsPage() {
     router.push('/dashboard/settings')
   }
 
-  const updateEmailSettings = (key: keyof NotificationSettings['emailNotifications'], value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      emailNotifications: {
-        ...prev.emailNotifications,
-        [key]: value
-      }
-    }))
-  }
 
   const updateSoundSettings = (key: keyof NotificationSettings['soundNotifications'], value: boolean | string) => {
     setSettings(prev => ({
@@ -234,89 +213,6 @@ export default function NotificationSettingsPage() {
         </Card>
       )}
 
-      {/* Email Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Mail className="h-5 w-5" />
-            <span>Email Notifications</span>
-          </CardTitle>
-          <CardDescription>
-            Configure email alerts for important events
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="new-orders-email" className="text-base">
-                New Orders
-              </Label>
-              <p className="text-sm text-gray-600">
-                Get notified when customers place new orders
-              </p>
-            </div>
-            <Switch
-              id="new-orders-email"
-              checked={settings.emailNotifications.newOrders}
-              onCheckedChange={(checked) => updateEmailSettings('newOrders', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="order-updates-email" className="text-base">
-                Order Updates
-              </Label>
-              <p className="text-sm text-gray-600">
-                Receive updates when orders change status
-              </p>
-            </div>
-            <Switch
-              id="order-updates-email"
-              checked={settings.emailNotifications.orderUpdates}
-              onCheckedChange={(checked) => updateEmailSettings('orderUpdates', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="daily-reports-email" className="text-base">
-                Daily Reports
-              </Label>
-              <p className="text-sm text-gray-600">
-                Receive daily summary of orders and revenue
-              </p>
-            </div>
-            <Switch
-              id="daily-reports-email"
-              checked={settings.emailNotifications.dailyReports}
-              onCheckedChange={(checked) => updateEmailSettings('dailyReports', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="weekly-reports-email" className="text-base">
-                Weekly Reports
-              </Label>
-              <p className="text-sm text-gray-600">
-                Receive weekly summary and analytics
-              </p>
-            </div>
-            <Switch
-              id="weekly-reports-email"
-              checked={settings.emailNotifications.weeklyReports}
-              onCheckedChange={(checked) => updateEmailSettings('weeklyReports', checked)}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Sound Notifications */}
       <Card>
