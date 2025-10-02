@@ -16,13 +16,10 @@ import { db } from '../../../../lib/firebase'
 interface NotificationSettings {
   soundNotifications: {
     newOrders: boolean
-    orderUpdates: boolean
     soundType: 'default' | 'gentle' | 'loud' | 'off'
   }
   pushNotifications: {
-    enabled: boolean
     newOrders: boolean
-    orderUpdates: boolean
   }
   quietHours: {
     enabled: boolean
@@ -37,13 +34,10 @@ export default function NotificationSettingsPage() {
   const [settings, setSettings] = useState<NotificationSettings>({
     soundNotifications: {
       newOrders: true,
-      orderUpdates: false,
       soundType: 'default'
     },
     pushNotifications: {
-      enabled: true,
-      newOrders: true,
-      orderUpdates: true
+      newOrders: true
     },
     quietHours: {
       enabled: false,
@@ -246,25 +240,6 @@ export default function NotificationSettingsPage() {
             />
           </div>
 
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="order-updates-sound" className="text-base">
-                Order Updates Sound
-              </Label>
-              <p className="text-sm text-gray-600">
-                Play sound when order status changes
-              </p>
-            </div>
-            <Switch
-              id="order-updates-sound"
-              checked={settings.soundNotifications.orderUpdates}
-              onCheckedChange={(checked) => updateSoundSettings('orderUpdates', checked)}
-            />
-          </div>
-
-          <Separator />
 
           <div className="space-y-2">
             <Label htmlFor="sound-type" className="text-base">
@@ -305,59 +280,19 @@ export default function NotificationSettingsPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="push-enabled" className="text-base">
-                Enable Push Notifications
+              <Label htmlFor="push-new-orders" className="text-base">
+                New Orders
               </Label>
               <p className="text-sm text-gray-600">
-                Allow browser to send push notifications
+                Push notification for new orders and show order count badge in sidebar
               </p>
             </div>
             <Switch
-              id="push-enabled"
-              checked={settings.pushNotifications.enabled}
-              onCheckedChange={(checked) => updatePushSettings('enabled', checked)}
+              id="push-new-orders"
+              checked={settings.pushNotifications.newOrders}
+              onCheckedChange={(checked) => updatePushSettings('newOrders', checked)}
             />
           </div>
-
-          {settings.pushNotifications.enabled && (
-            <>
-              <Separator />
-              
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="push-new-orders" className="text-base">
-                    New Orders
-                  </Label>
-                  <p className="text-sm text-gray-600">
-                    Push notification for new orders and show order count badge in sidebar
-                  </p>
-                </div>
-                <Switch
-                  id="push-new-orders"
-                  checked={settings.pushNotifications.newOrders}
-                  onCheckedChange={(checked) => updatePushSettings('newOrders', checked)}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="push-order-updates" className="text-base">
-                    Order Updates
-                  </Label>
-                  <p className="text-sm text-gray-600">
-                    Push notification for order status changes
-                  </p>
-                </div>
-                <Switch
-                  id="push-order-updates"
-                  checked={settings.pushNotifications.orderUpdates}
-                  onCheckedChange={(checked) => updatePushSettings('orderUpdates', checked)}
-                />
-              </div>
-            </>
-          )}
         </CardContent>
       </Card>
 

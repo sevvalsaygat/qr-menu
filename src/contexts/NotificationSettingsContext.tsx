@@ -8,13 +8,10 @@ import { db } from '@/lib/firebase'
 interface NotificationSettings {
   soundNotifications: {
     newOrders: boolean
-    orderUpdates: boolean
     soundType: 'default' | 'gentle' | 'loud' | 'off'
   }
   pushNotifications: {
-    enabled: boolean
     newOrders: boolean
-    orderUpdates: boolean
   }
   quietHours: {
     enabled: boolean
@@ -35,13 +32,10 @@ const NotificationSettingsContext = createContext<NotificationSettingsContextTyp
 const defaultSettings: NotificationSettings = {
   soundNotifications: {
     newOrders: true,
-    orderUpdates: false,
     soundType: 'default'
   },
   pushNotifications: {
-    enabled: true,
-    newOrders: true,
-    orderUpdates: true
+    newOrders: true
   },
   quietHours: {
     enabled: false,
@@ -57,7 +51,7 @@ export function NotificationSettingsProvider({ children }: { children: React.Rea
   const [error, setError] = useState<string | null>(null)
 
   // Calculate whether to show order count based on push notification settings
-  const showOrderCount = settings.pushNotifications.enabled && settings.pushNotifications.newOrders
+  const showOrderCount = settings.pushNotifications.newOrders
 
   useEffect(() => {
     if (!user?.uid) {
