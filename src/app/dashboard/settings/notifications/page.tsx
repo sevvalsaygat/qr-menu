@@ -329,7 +329,7 @@ export default function NotificationSettingsPage() {
                     New Orders
                   </Label>
                   <p className="text-sm text-gray-600">
-                    Push notification for new orders
+                    Push notification for new orders and show order count badge in sidebar
                   </p>
                 </div>
                 <Switch
