@@ -6,6 +6,11 @@ import { useRequireAuth } from '../../hooks/useAuth'
 import { Sidebar, SidebarProvider, MainContent } from '../../components/sidebar'
 import { OrderNotificationProvider } from '../../contexts/OrderNotificationContext'
 import { NotificationSettingsProvider } from '../../contexts/NotificationSettingsContext'
+import { SoundNotificationProvider } from '../../contexts/SoundNotificationContext'
+// Import sound test for development
+if (process.env.NODE_ENV === 'development') {
+  import('../../lib/sound-test')
+}
 
 export default function DashboardLayout({
   children,
@@ -35,19 +40,21 @@ export default function DashboardLayout({
 
   return (
     <NotificationSettingsProvider>
-      <OrderNotificationProvider>
-        <SidebarProvider>
-          <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar */}
-            <Sidebar className="fixed h-full z-30" />
-            
-            {/* Main Content Area */}
-            <MainContent>
-              {children}
-            </MainContent>
-          </div>
-        </SidebarProvider>
-      </OrderNotificationProvider>
+      <SoundNotificationProvider>
+        <OrderNotificationProvider>
+          <SidebarProvider>
+            <div className="min-h-screen bg-gray-50 flex">
+              {/* Sidebar */}
+              <Sidebar className="fixed h-full z-30" />
+              
+              {/* Main Content Area */}
+              <MainContent>
+                {children}
+              </MainContent>
+            </div>
+          </SidebarProvider>
+        </OrderNotificationProvider>
+      </SoundNotificationProvider>
     </NotificationSettingsProvider>
   )
 }

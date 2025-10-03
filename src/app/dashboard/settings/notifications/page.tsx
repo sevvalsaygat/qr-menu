@@ -8,9 +8,10 @@ import { Switch } from '../../../../components/ui/switch'
 import { Label } from '../../../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select'
 import { Separator } from '../../../../components/ui/separator'
-import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX, Clock } from 'lucide-react'
+import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX, Clock, Play } from 'lucide-react'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useNotificationSettings } from '../../../../contexts/NotificationSettingsContext'
+import { useSoundNotifications } from '../../../../contexts/SoundNotificationContext'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../../../../lib/firebase'
 
@@ -33,6 +34,7 @@ export default function NotificationSettingsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { isInQuietHours } = useNotificationSettings()
+  const { playTestSound, initializeAudio, isAudioInitialized } = useSoundNotifications()
   const [settings, setSettings] = useState<NotificationSettings>({
     soundNotifications: {
       newOrders: true,
@@ -264,6 +266,45 @@ export default function NotificationSettingsPage() {
             <p className="text-sm text-gray-600">
               Choose the notification sound that works best for your environment
             </p>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">
+                Test Sound
+              </Label>
+              <p className="text-sm text-gray-600">
+                Play the selected notification sound to test it
+              </p>
+              {!isAudioInitialized && (
+                <p className="text-xs text-amber-600">
+                  Audio not initialized. Click &ldquo;Initialize Audio&rdquo; first, then test.
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {!isAudioInitialized && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={initializeAudio}
+                >
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  Initialize Audio
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={playTestSound}
+                disabled={settings.soundNotifications.soundType === 'off'}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Test Sound
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

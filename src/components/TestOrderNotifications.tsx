@@ -4,17 +4,19 @@ import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrderNotifications } from '@/contexts/OrderNotificationContext'
 import { useNotificationSettings } from '@/contexts/NotificationSettingsContext'
+import { useSoundNotifications } from '@/contexts/SoundNotificationContext'
 import { createTestOrder, createMultipleTestOrders } from '@/lib/test-orders'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
 import { Alert, AlertDescription } from './ui/alert'
-import { Plus, TestTube, RefreshCw } from 'lucide-react'
+import { Plus, TestTube, RefreshCw, Volume2 } from 'lucide-react'
 
 export function TestOrderNotifications() {
   const { user } = useAuth()
   const { totalActiveOrders, pendingOrders, isLoading, error } = useOrderNotifications()
   const { showOrderCount, isInQuietHours, settings } = useNotificationSettings()
+  const { playTestSound, initializeAudio, isAudioInitialized } = useSoundNotifications()
   const [isCreating, setIsCreating] = useState(false)
   const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null)
 
@@ -63,7 +65,7 @@ export function TestOrderNotifications() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-800">{totalActiveOrders}</div>
             <div className="text-sm text-yellow-600">Active Orders</div>
@@ -84,6 +86,12 @@ export function TestOrderNotifications() {
             </div>
             <div className="text-sm text-yellow-600">Quiet Hours</div>
           </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-yellow-800">
+              {isAudioInitialized ? 'READY' : 'NOT READY'}
+            </div>
+            <div className="text-sm text-yellow-600">Audio Status</div>
+          </div>
         </div>
 
         {error && (
@@ -99,7 +107,7 @@ export function TestOrderNotifications() {
           </div>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             onClick={handleCreateTestOrder}
             disabled={isCreating || !user}
@@ -120,6 +128,27 @@ export function TestOrderNotifications() {
             <Plus className="h-4 w-4 mr-1" />
             Create 3 Test Orders
           </Button>
+          {!isAudioInitialized && (
+            <Button
+              onClick={initializeAudio}
+              size="sm"
+              variant="outline"
+              className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
+            >
+              <Volume2 className="h-4 w-4 mr-1" />
+              Initialize Audio
+            </Button>
+          )}
+          <Button
+            onClick={playTestSound}
+            disabled={settings.soundNotifications.soundType === 'off'}
+            size="sm"
+            variant="outline"
+            className="border-yellow-400 text-yellow-800 hover:bg-yellow-100"
+          >
+            <Volume2 className="h-4 w-4 mr-1" />
+            Test Sound
+          </Button>
         </div>
 
         {lastCreatedOrder && (
@@ -139,12 +168,19 @@ export function TestOrderNotifications() {
               <a href="/dashboard/settings/notifications">Notification Settings</a>
             </Button>
           </div>
+          <div>
+            <strong>Sound Notifications:</strong> Sound will play for new orders when enabled in notification settings.
+            {!isAudioInitialized && ' Audio needs to be initialized first.'}
+          </div>
           {settings.quietHours.enabled && (
             <div>
               <strong>Quiet Hours:</strong> {settings.quietHours.startTime} - {settings.quietHours.endTime} 
               {isInQuietHours && ' (Currently Active)'}
             </div>
           )}
+          <div>
+            <strong>Debug:</strong> Check browser console for detailed logging of order detection and sound playback.
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,11 +1,12 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { Order } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import { onSnapshot, collection, query, where, orderBy, DocumentSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { getUserRestaurants } from '@/lib/firestore'
+import { useSoundNotifications } from './SoundNotificationContext'
 
 interface OrderNotificationContextType {
   pendingOrders: Order[]
@@ -24,11 +25,14 @@ const OrderNotificationContext = createContext<OrderNotificationContextType | un
 
 export function OrderNotificationProvider({ children }: { children: React.ReactNode }) {
   const { user, userData } = useAuth()
+  const { playNewOrderSound } = useSoundNotifications()
   const [pendingOrders, setPendingOrders] = useState<Order[]>([])
   const [confirmedOrders, setConfirmedOrders] = useState<Order[]>([])
   const [completedOrders, setCompletedOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const previousOrderCountRef = useRef<number>(0)
+  const hasInitializedRef = useRef<boolean>(false)
 
   // Helper function to convert Firestore document to Order
   const docToOrder = (doc: DocumentSnapshot): Order => {
@@ -67,6 +71,10 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
       return
     }
 
+    // Reset initialization flags when user changes
+    hasInitializedRef.current = false
+    previousOrderCountRef.current = 0
+
     // Get the restaurant ID from user's restaurants
     const setupOrderListeners = async () => {
       try {
@@ -96,6 +104,25 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
         // In a real implementation, you might want to add a status field to distinguish between pending/confirmed
         setPendingOrders(orders)
         setConfirmedOrders([]) // Empty for now since we don't have status differentiation
+        
+        // Check if new orders have arrived and play sound
+        const currentOrderCount = orders.length
+        
+        // Mark as initialized after first load
+        if (!hasInitializedRef.current) {
+          hasInitializedRef.current = true
+          console.log(`✅ Order listener initialized with ${currentOrderCount} existing orders`)
+        } else {
+          // Only check for new orders after the initial load is complete
+          if (currentOrderCount > previousOrderCountRef.current) {
+            // New orders detected, play notification sound
+            console.log(`🔔 New order detected! Count: ${currentOrderCount}, Previous: ${previousOrderCountRef.current}`)
+            playNewOrderSound()
+          }
+        }
+        
+        previousOrderCountRef.current = currentOrderCount
+        
         setIsLoading(false)
         setError(null)
       },
@@ -142,7 +169,7 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
     return () => {
       cleanup.then(cleanupFn => cleanupFn?.())
     }
-  }, [user, userData])
+  }, [user, userData, playNewOrderSound])
 
   const value: OrderNotificationContextType = {
     pendingOrders,
