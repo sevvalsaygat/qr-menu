@@ -6,6 +6,7 @@ import { useOrderNotifications } from '@/contexts/OrderNotificationContext'
 import { useNotificationSettings } from '@/contexts/NotificationSettingsContext'
 import { useSoundNotifications } from '@/contexts/SoundNotificationContext'
 import { createTestOrder, createMultipleTestOrders } from '@/lib/test-orders'
+import { createNotificationAudio } from '@/lib/sound-generator'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
@@ -16,7 +17,7 @@ export function TestOrderNotifications() {
   const { user } = useAuth()
   const { totalActiveOrders, pendingOrders, isLoading, error } = useOrderNotifications()
   const { showOrderCount, isInQuietHours, settings } = useNotificationSettings()
-  const { playTestSound, initializeAudio, isAudioInitialized } = useSoundNotifications()
+  const { initializeAudio, isAudioInitialized } = useSoundNotifications()
   const [isCreating, setIsCreating] = useState(false)
   const [lastCreatedOrder, setLastCreatedOrder] = useState<string | null>(null)
 
@@ -48,6 +49,31 @@ export function TestOrderNotifications() {
       console.error('Error creating test orders:', error)
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  // Local test sound function that uses current settings
+  const handleTestSound = () => {
+    console.log('🧪 Testing sound from test component with settings:', settings.soundNotifications)
+    
+    // Don't play sound if sound type is 'off'
+    if (settings.soundNotifications.soundType === 'off') {
+      console.log('❌ Sound type is set to off, not playing test sound')
+      return
+    }
+    
+    // Initialize audio if not already done
+    if (!isAudioInitialized) {
+      console.log('🔄 Audio not initialized, attempting to initialize...')
+      initializeAudio()
+      // Give a small delay for audio context to be ready
+      setTimeout(() => {
+        console.log('🎵 Playing test sound after initialization:', settings.soundNotifications.soundType)
+        createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
+      }, 100)
+    } else {
+      console.log('🎵 Playing test sound immediately:', settings.soundNotifications.soundType)
+      createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
     }
   }
 
@@ -140,7 +166,7 @@ export function TestOrderNotifications() {
             </Button>
           )}
           <Button
-            onClick={playTestSound}
+            onClick={handleTestSound}
             disabled={settings.soundNotifications.soundType === 'off'}
             size="sm"
             variant="outline"

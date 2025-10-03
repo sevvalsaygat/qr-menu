@@ -14,6 +14,7 @@ import { useNotificationSettings } from '../../../../contexts/NotificationSettin
 import { useSoundNotifications } from '../../../../contexts/SoundNotificationContext'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../../../../lib/firebase'
+import { createNotificationAudio } from '../../../../lib/sound-generator'
 
 interface NotificationSettings {
   soundNotifications: {
@@ -34,7 +35,7 @@ export default function NotificationSettingsPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { isInQuietHours } = useNotificationSettings()
-  const { playTestSound, initializeAudio, isAudioInitialized } = useSoundNotifications()
+  const { initializeAudio, isAudioInitialized } = useSoundNotifications()
   const [settings, setSettings] = useState<NotificationSettings>({
     soundNotifications: {
       newOrders: true,
@@ -109,6 +110,31 @@ export default function NotificationSettingsPage() {
 
   const handleBack = () => {
     router.push('/dashboard/settings')
+  }
+
+  // Local test sound function that uses current local state
+  const handleTestSound = () => {
+    console.log('🧪 Testing sound with current selection:', settings.soundNotifications.soundType)
+    
+    // Don't play sound if sound type is 'off'
+    if (settings.soundNotifications.soundType === 'off') {
+      console.log('❌ Sound type is set to off, not playing test sound')
+      return
+    }
+    
+    // Always initialize audio if not already done (automatic initialization)
+    if (!isAudioInitialized) {
+      console.log('🔄 Audio not initialized, automatically initializing...')
+      initializeAudio()
+      // Give a small delay for audio context to be ready
+      setTimeout(() => {
+        console.log('🎵 Playing test sound after automatic initialization:', settings.soundNotifications.soundType)
+        createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
+      }, 100)
+    } else {
+      console.log('🎵 Playing test sound immediately:', settings.soundNotifications.soundType)
+      createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
+    }
   }
 
 
@@ -266,6 +292,13 @@ export default function NotificationSettingsPage() {
             <p className="text-sm text-gray-600">
               Choose the notification sound that works best for your environment
             </p>
+            {settings.soundNotifications.soundType !== 'off' && (
+              <p className="text-xs text-blue-600 font-medium">
+                Currently selected: <span className="font-semibold">{settings.soundNotifications.soundType}</span> sound
+                <br />
+                <span className="text-gray-500">Changes take effect immediately for testing</span>
+              </p>
+            )}
           </div>
 
           <Separator />
@@ -275,30 +308,12 @@ export default function NotificationSettingsPage() {
               <Label className="text-base">
                 Test Sound
               </Label>
-              <p className="text-sm text-gray-600">
-                Play the selected notification sound to test it
-              </p>
-              {!isAudioInitialized && (
-                <p className="text-xs text-amber-600">
-                  Audio not initialized. Click &ldquo;Initialize Audio&rdquo; first, then test.
-                </p>
-              )}
             </div>
             <div className="flex gap-2">
-              {!isAudioInitialized && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={initializeAudio}
-                >
-                  <Volume2 className="h-4 w-4 mr-2" />
-                  Initialize Audio
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={playTestSound}
+                onClick={handleTestSound}
                 disabled={settings.soundNotifications.soundType === 'off'}
               >
                 <Play className="h-4 w-4 mr-2" />
