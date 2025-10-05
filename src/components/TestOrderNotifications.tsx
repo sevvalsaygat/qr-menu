@@ -6,6 +6,7 @@ import { useOrderNotifications } from '@/contexts/OrderNotificationContext'
 import { useNotificationSettings } from '@/contexts/NotificationSettingsContext'
 import { useSoundNotifications } from '@/contexts/SoundNotificationContext'
 import { createTestOrder, createMultipleTestOrders } from '@/lib/test-orders'
+import { testOrderUpdates, testMultipleOrderUpdates } from '@/lib/test-order-updates'
 import { createNotificationAudio } from '@/lib/sound-generator'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -47,6 +48,56 @@ export function TestOrderNotifications() {
       setLastCreatedOrder(orderIds[orderIds.length - 1])
     } catch (error) {
       console.error('Error creating test orders:', error)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleTestOrderUpdates = async () => {
+    if (!user) return
+    
+    setIsCreating(true)
+    try {
+      // Get the first restaurant
+      const { getUserRestaurants } = await import('@/lib/firestore')
+      const restaurants = await getUserRestaurants(user.uid)
+      if (restaurants.length === 0) {
+        console.error('No restaurant found')
+        return
+      }
+      
+      const restaurantId = restaurants[0].id
+      const testTableId = 'test-table-updates'
+      
+      await testOrderUpdates(restaurantId, testTableId)
+      setLastCreatedOrder('Order update test completed')
+    } catch (error) {
+      console.error('Error testing order updates:', error)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleTestMultipleOrderUpdates = async () => {
+    if (!user) return
+    
+    setIsCreating(true)
+    try {
+      // Get the first restaurant
+      const { getUserRestaurants } = await import('@/lib/firestore')
+      const restaurants = await getUserRestaurants(user.uid)
+      if (restaurants.length === 0) {
+        console.error('No restaurant found')
+        return
+      }
+      
+      const restaurantId = restaurants[0].id
+      const testTableId = 'test-table-multiple-updates'
+      
+      await testMultipleOrderUpdates(restaurantId, testTableId)
+      setLastCreatedOrder('Multiple order updates test completed')
+    } catch (error) {
+      console.error('Error testing multiple order updates:', error)
     } finally {
       setIsCreating(false)
     }
@@ -153,6 +204,26 @@ export function TestOrderNotifications() {
           >
             <Plus className="h-4 w-4 mr-1" />
             Create 3 Test Orders
+          </Button>
+          <Button
+            onClick={handleTestOrderUpdates}
+            disabled={isCreating || !user}
+            size="sm"
+            variant="outline"
+            className="border-blue-400 text-blue-800 hover:bg-blue-100"
+          >
+            <TestTube className="h-4 w-4 mr-1" />
+            Test Order Updates
+          </Button>
+          <Button
+            onClick={handleTestMultipleOrderUpdates}
+            disabled={isCreating || !user}
+            size="sm"
+            variant="outline"
+            className="border-blue-400 text-blue-800 hover:bg-blue-100"
+          >
+            <TestTube className="h-4 w-4 mr-1" />
+            Test Multiple Updates
           </Button>
           {!isAudioInitialized && (
             <Button

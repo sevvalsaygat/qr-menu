@@ -33,6 +33,8 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
   const [error, setError] = useState<string | null>(null)
   const previousOrderCountRef = useRef<number>(0)
   const hasInitializedRef = useRef<boolean>(false)
+  const previousOrderIdsRef = useRef<Set<string>>(new Set())
+  const previousOrderContentsRef = useRef<Map<string, string>>(new Map())
 
   // Helper function to convert Firestore document to Order
   const docToOrder = (doc: DocumentSnapshot): Order => {
@@ -105,23 +107,64 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
         setPendingOrders(orders)
         setConfirmedOrders([]) // Empty for now since we don't have status differentiation
         
-        // Check if new orders have arrived and play sound
+        // Check if new orders have arrived or existing orders have been updated
         const currentOrderCount = orders.length
+        const currentOrderIds = new Set(orders.map(order => order.id))
+        const currentOrderContents = new Map<string, string>()
+        
+        // Create content signatures for each order to detect changes
+        orders.forEach(order => {
+          const contentSignature = JSON.stringify({
+            items: order.items,
+            summary: order.summary,
+            specialInstructions: order.specialInstructions
+          })
+          currentOrderContents.set(order.id, contentSignature)
+        })
         
         // Mark as initialized after first load
         if (!hasInitializedRef.current) {
           hasInitializedRef.current = true
+          previousOrderIdsRef.current = currentOrderIds
+          previousOrderContentsRef.current = currentOrderContents
           console.log(`✅ Order listener initialized with ${currentOrderCount} existing orders`)
         } else {
-          // Only check for new orders after the initial load is complete
-          if (currentOrderCount > previousOrderCountRef.current) {
-            // New orders detected, play notification sound
-            console.log(`🔔 New order detected! Count: ${currentOrderCount}, Previous: ${previousOrderCountRef.current}`)
+          let shouldPlayNotification = false
+          let notificationReason = ''
+          
+          // Check for new orders (orders with IDs not in previous set)
+          const newOrders = orders.filter(order => !previousOrderIdsRef.current.has(order.id))
+          if (newOrders.length > 0) {
+            shouldPlayNotification = true
+            notificationReason = `New order(s) detected: ${newOrders.length}`
+            console.log(`🔔 ${notificationReason}`)
+          }
+          
+          // Check for updated orders (existing orders with different content)
+          const updatedOrders = orders.filter(order => {
+            if (!previousOrderIdsRef.current.has(order.id)) return false // Skip new orders
+            const previousContent = previousOrderContentsRef.current.get(order.id)
+            const currentContent = currentOrderContents.get(order.id)
+            return previousContent !== currentContent
+          })
+          
+          if (updatedOrders.length > 0) {
+            shouldPlayNotification = true
+            notificationReason = notificationReason 
+              ? `${notificationReason}, Updated order(s): ${updatedOrders.length}`
+              : `Updated order(s) detected: ${updatedOrders.length}`
+            console.log(`🔔 ${notificationReason}`)
+          }
+          
+          if (shouldPlayNotification) {
             playNewOrderSound()
           }
         }
         
+        // Update tracking references
         previousOrderCountRef.current = currentOrderCount
+        previousOrderIdsRef.current = currentOrderIds
+        previousOrderContentsRef.current = currentOrderContents
         
         setIsLoading(false)
         setError(null)

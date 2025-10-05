@@ -1,6 +1,5 @@
 // Test utility functions for order notifications
 import { createOrder } from './firestore'
-import { Order } from '../types'
 
 // Test function to create a sample order for testing notifications
 export const createTestOrder = async (restaurantId: string, tableId: string): Promise<string> => {
@@ -32,7 +31,8 @@ export const createTestOrder = async (restaurantId: string, tableId: string): Pr
     customer: {
       name: 'Test Customer'
     },
-    specialInstructions: 'This is a test order for notification testing'
+    specialInstructions: 'This is a test order for notification testing',
+    isCancelled: false
   }
 
   return await createOrder(restaurantId, testOrderData)
