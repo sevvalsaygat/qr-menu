@@ -121,25 +121,19 @@ export default function NotificationSettingsPage() {
 
   // Local test sound function that uses current local state
   const handleTestSound = () => {
-    console.log('🧪 Testing sound with current selection:', settings.soundNotifications.soundType)
-    
     // Don't play sound if sound type is 'off'
     if (settings.soundNotifications.soundType === 'off') {
-      console.log('❌ Sound type is set to off, not playing test sound')
       return
     }
     
     // Always initialize audio if not already done (automatic initialization)
     if (!isAudioInitialized) {
-      console.log('🔄 Audio not initialized, automatically initializing...')
       initializeAudio()
       // Give a small delay for audio context to be ready
       setTimeout(() => {
-        console.log('🎵 Playing test sound after automatic initialization:', settings.soundNotifications.soundType)
         createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
       }, 100)
     } else {
-      console.log('🎵 Playing test sound immediately:', settings.soundNotifications.soundType)
       createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
     }
   }

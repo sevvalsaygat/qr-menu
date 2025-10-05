@@ -127,17 +127,13 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
           hasInitializedRef.current = true
           previousOrderIdsRef.current = currentOrderIds
           previousOrderContentsRef.current = currentOrderContents
-          console.log(`✅ Order listener initialized with ${currentOrderCount} existing orders`)
         } else {
           let shouldPlayNotification = false
-          let notificationReason = ''
           
           // Check for new orders (orders with IDs not in previous set)
           const newOrders = orders.filter(order => !previousOrderIdsRef.current.has(order.id))
           if (newOrders.length > 0) {
             shouldPlayNotification = true
-            notificationReason = `New order(s) detected: ${newOrders.length}`
-            console.log(`🔔 ${notificationReason}`)
           }
           
           // Check for updated orders (existing orders with different content)
@@ -150,10 +146,6 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
           
           if (updatedOrders.length > 0) {
             shouldPlayNotification = true
-            notificationReason = notificationReason 
-              ? `${notificationReason}, Updated order(s): ${updatedOrders.length}`
-              : `Updated order(s) detected: ${updatedOrders.length}`
-            console.log(`🔔 ${notificationReason}`)
           }
           
           if (shouldPlayNotification) {

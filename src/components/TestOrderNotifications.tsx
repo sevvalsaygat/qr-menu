@@ -105,25 +105,19 @@ export function TestOrderNotifications() {
 
   // Local test sound function that uses current settings
   const handleTestSound = () => {
-    console.log('🧪 Testing sound from test component with settings:', settings.soundNotifications)
-    
     // Don't play sound if sound type is 'off'
     if (settings.soundNotifications.soundType === 'off') {
-      console.log('❌ Sound type is set to off, not playing test sound')
       return
     }
     
     // Initialize audio if not already done
     if (!isAudioInitialized) {
-      console.log('🔄 Audio not initialized, attempting to initialize...')
       initializeAudio()
       // Give a small delay for audio context to be ready
       setTimeout(() => {
-        console.log('🎵 Playing test sound after initialization:', settings.soundNotifications.soundType)
         createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
       }, 100)
     } else {
-      console.log('🎵 Playing test sound immediately:', settings.soundNotifications.soundType)
       createNotificationAudio(settings.soundNotifications.soundType as 'default' | 'gentle' | 'loud')
     }
   }
