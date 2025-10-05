@@ -39,6 +39,7 @@ import {
 } from '@/lib/date-utils'
 import { searchOrders, getSearchSuggestions } from '@/lib/search-utils'
 import { formatCurrency } from '@/lib/utils'
+import { TestOrderNotifications } from '@/components/TestOrderNotifications'
 
 interface OrderStats {
   activeCount: number
@@ -612,6 +613,9 @@ export default function OrdersPage() {
           Refresh
         </Button>
       </div>
+
+      {/* Test Component - Only in Development */}
+      <TestOrderNotifications />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

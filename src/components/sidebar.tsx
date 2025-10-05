@@ -4,8 +4,11 @@ import { useState, createContext, useContext } from 'react'
 import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '../hooks/useAuth'
+import { useOrderNotifications } from '../contexts/OrderNotificationContext'
+import { useNotificationSettings } from '../contexts/NotificationSettingsContext'
 import { logOut } from '../lib/auth'
 import { Button } from './ui/button'
+import { AnimatedBadge } from './ui/animated-badge'
 import { 
   Home, 
   QrCode, 
@@ -65,6 +68,8 @@ export function Sidebar({ className }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { userData, user } = useAuth()
+  const { totalActiveOrders } = useOrderNotifications()
+  const { showOrderCount } = useNotificationSettings()
 
   const handleSignOut = async () => {
     const result = await logOut()
@@ -78,7 +83,7 @@ export function Sidebar({ className }: SidebarProps) {
     { name: 'Tables', href: '/dashboard/tables', icon: QrCode },
     { name: 'Categories', href: '/dashboard/categories', icon: ShoppingBag },
     { name: 'Products', href: '/dashboard/products', icon: Plus },
-    { name: 'Orders', href: '/dashboard/orders', icon: BarChart3 }
+    { name: 'Orders', href: '/dashboard/orders', icon: BarChart3, badge: showOrderCount ? totalActiveOrders : 0 }
   ]
 
   return (
@@ -143,7 +148,14 @@ export function Sidebar({ className }: SidebarProps) {
                   title={isCollapsed ? item.name : undefined}
                 >
                   <item.icon className={cn("h-5 w-5", isCollapsed ? "" : "mr-3")} />
-                  {!isCollapsed && <span>{item.name}</span>}
+                  {!isCollapsed && (
+                    <div className="flex items-center justify-between w-full">
+                      <span>{item.name}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <AnimatedBadge count={item.badge} size="sm" />
+                      )}
+                    </div>
+                  )}
                 </button>
               </li>
             )

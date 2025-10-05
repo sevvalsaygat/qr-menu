@@ -14,6 +14,10 @@ export default function SettingsPage() {
   const handleEditAccount = () => {
     router.push('/dashboard/settings/user')
   }
+
+  const handleConfigureNotifications = () => {
+    router.push('/dashboard/settings/notifications')
+  }
   return (
     <div className="space-y-8">
       {/* Page Header */}
@@ -93,7 +97,11 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-600">
                 Set up email alerts, sound notifications, and order update preferences.
               </p>
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleConfigureNotifications}
+              >
                 Configure Notifications
               </Button>
             </div>
