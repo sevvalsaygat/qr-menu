@@ -8,7 +8,7 @@ import { Switch } from '../../../../components/ui/switch'
 import { Label } from '../../../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select'
 import { Separator } from '../../../../components/ui/separator'
-import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX, Clock, Play } from 'lucide-react'
+import { Bell, ArrowLeft, CheckCircle, AlertCircle, Loader2, Volume2, VolumeX, Clock, Play, X } from 'lucide-react'
 import { useAuth } from '../../../../hooks/useAuth'
 import { useNotificationSettings } from '../../../../contexts/NotificationSettingsContext'
 import { useSoundNotifications } from '../../../../contexts/SoundNotificationContext'
@@ -55,6 +55,7 @@ export default function NotificationSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   // Load notification settings
   useEffect(() => {
@@ -90,6 +91,7 @@ export default function NotificationSettingsPage() {
       setSaving(true)
       setError(null)
       setSuccess(null)
+      setSaveSuccess(false)
 
       const settingsRef = doc(db, 'users', user.uid)
       await setDoc(settingsRef, {
@@ -97,12 +99,17 @@ export default function NotificationSettingsPage() {
       }, { merge: true })
 
       setSuccess('Notification settings saved successfully!')
+      setSaveSuccess(true)
       
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(null), 3000)
+      // Clear success message after 5 seconds (increased from 3 seconds)
+      setTimeout(() => {
+        setSuccess(null)
+        setSaveSuccess(false)
+      }, 5000)
     } catch (err) {
       console.error('Error saving notification settings:', err)
       setError('Failed to save notification settings. Please try again.')
+      setSaveSuccess(false)
     } finally {
       setSaving(false)
     }
@@ -213,28 +220,62 @@ export default function NotificationSettingsPage() {
         </Button>
       </div>
 
-      {/* Success */}
+      {/* Success Message - Prominent Display */}
       {success && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <p className="text-sm text-green-800">{success}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+          <Card className="border-green-500 bg-green-100 shadow-lg ring-1 ring-green-500/20 min-w-80 animate-pulse">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-green-900">Settings Saved!</p>
+                    <p className="text-sm text-green-700">{success}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSuccess(null)}
+                  className="text-green-600 hover:text-green-700 hover:bg-green-200 p-1 h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Error */}
+      {/* Error Message - Prominent Display */}
       {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-5 w-5 text-red-600" />
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+          <Card className="border-red-500 bg-red-100 shadow-lg ring-1 ring-red-500/20 min-w-80">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-red-900">Error</p>
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setError(null)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-200 p-1 h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
 
@@ -431,12 +472,23 @@ export default function NotificationSettingsPage() {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="px-8"
+          className={`px-8 transition-all duration-200 ${
+            saveSuccess 
+              ? 'bg-green-600 hover:bg-green-700 text-white' 
+              : saving 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
         >
           {saving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
               Saving...
+            </>
+          ) : saveSuccess ? (
+            <>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Saved!
             </>
           ) : (
             'Save Settings'
