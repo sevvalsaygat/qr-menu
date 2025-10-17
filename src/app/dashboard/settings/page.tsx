@@ -132,18 +132,6 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      {/* Coming Soon Notice */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-2">
-            <SettingsIcon className="h-5 w-5 text-amber-600" />
-            <p className="text-sm text-amber-800">
-              <strong>Coming Soon:</strong> Advanced settings functionality is currently under development. 
-              These features will be available in a future update.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
