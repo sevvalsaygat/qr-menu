@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
-import { Settings as SettingsIcon, User, Building, Bell, Shield } from 'lucide-react'
+import { Settings as SettingsIcon, User, Building, Bell } from 'lucide-react'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -19,7 +19,7 @@ export default function SettingsPage() {
     router.push('/dashboard/settings/notifications')
   }
   return (
-    <div className="space-y-8">
+    <div className="max-w-4xl space-y-8">
       {/* Page Header */}
       <div className="flex items-center space-x-2">
         <SettingsIcon className="h-8 w-8 text-gray-600" />
@@ -30,7 +30,30 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        {/* Account Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <User className="h-5 w-5" />
+              <span>Account Settings</span>
+            </CardTitle>
+            <CardDescription>
+              Manage your account and login preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Update your email, password, and account security settings.
+              </p>
+              <Button variant="outline" className="w-full" onClick={handleEditAccount}>
+                Edit Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Restaurant Profile */}
         <Card>
           <CardHeader>
@@ -53,29 +76,6 @@ export default function SettingsPage() {
                 onClick={handleEditRestaurantInfo}
               >
                 Edit Restaurant Info
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>Account Settings</span>
-            </CardTitle>
-            <CardDescription>
-              Manage your account and login preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Update your email, password, and account security settings.
-              </p>
-              <Button variant="outline" className="w-full" onClick={handleEditAccount}>
-                Edit Account
               </Button>
             </div>
           </CardContent>
@@ -108,42 +108,8 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Security */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5" />
-              <span>Security</span>
-            </CardTitle>
-            <CardDescription>
-              Manage security settings and data privacy
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Two-factor authentication, session management, and data export options.
-              </p>
-              <Button variant="outline" className="w-full">
-                Security Settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Coming Soon Notice */}
-      <Card className="border-amber-200 bg-amber-50">
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-2">
-            <SettingsIcon className="h-5 w-5 text-amber-600" />
-            <p className="text-sm text-amber-800">
-              <strong>Coming Soon:</strong> Advanced settings functionality is currently under development. 
-              These features will be available in a future update.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -7,10 +7,6 @@ import { Sidebar, SidebarProvider, MainContent } from '../../components/sidebar'
 import { OrderNotificationProvider } from '../../contexts/OrderNotificationContext'
 import { NotificationSettingsProvider } from '../../contexts/NotificationSettingsContext'
 import { SoundNotificationProvider } from '../../contexts/SoundNotificationContext'
-// Import sound test for development
-if (process.env.NODE_ENV === 'development') {
-  import('../../lib/sound-test')
-}
 
 export default function DashboardLayout({
   children,
