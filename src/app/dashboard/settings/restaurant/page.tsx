@@ -12,6 +12,8 @@ import { getUserRestaurants, updateRestaurant } from '../../../../lib/firestore'
 import { updateUserRestaurantName } from '../../../../lib/auth'
 import { Restaurant } from '../../../../types'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip'
+import { Switch } from '../../../../components/ui/switch'
+import { useOrderDisplay } from '../../../../contexts/OrderDisplayContext'
 import { 
   Select,
   SelectContent,
@@ -23,9 +25,11 @@ import {
 export default function RestaurantEditPage() {
   const router = useRouter()
   const { user, refreshUserData } = useAuth()
+  const { showCanceledOrders, setShowCanceledOrders } = useOrderDisplay()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [restaurantName, setRestaurantName] = useState('')
   const [currency, setCurrency] = useState<'₺' | '$' | '€'>('$')
+  const [localShowCanceledOrders, setLocalShowCanceledOrders] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -64,6 +68,11 @@ export default function RestaurantEditPage() {
     loadRestaurant()
   }, [user?.uid])
 
+  // Initialize local toggle state with current context value
+  useEffect(() => {
+    setLocalShowCanceledOrders(showCanceledOrders)
+  }, [showCanceledOrders])
+
   // Handle saving restaurant info
   const handleSave = async () => {
     if (!restaurant || !restaurantName.trim() || !user?.uid) return
@@ -86,6 +95,9 @@ export default function RestaurantEditPage() {
         updateUserRestaurantName(user.uid, trimmedName)
       ])
 
+      // Save the toggle state to localStorage
+      setShowCanceledOrders(localShowCanceledOrders)
+
       // Update local state
       setRestaurant(prev => prev ? { ...prev, name: trimmedName, settings: { ...prev.settings, currency } } : null)
       
@@ -106,6 +118,24 @@ export default function RestaurantEditPage() {
 
   // Handle back navigation
   const handleBack = () => {
+    router.push('/dashboard/settings')
+  }
+
+  // Handle canceling changes
+  const handleCancel = () => {
+    // Reset form to original values
+    if (restaurant) {
+      setRestaurantName(restaurant.name)
+      const currentCurrency = restaurant.settings?.currency || '$'
+      if (currentCurrency === '₺' || currentCurrency === '$' || currentCurrency === '€') {
+        setCurrency(currentCurrency)
+      } else {
+        setCurrency('$')
+      }
+    }
+    setLocalShowCanceledOrders(showCanceledOrders)
+    setError('')
+    setSuccess('')
     router.push('/dashboard/settings')
   }
 
@@ -236,6 +266,23 @@ export default function RestaurantEditPage() {
             </Select>
           </div>
 
+          {/* Show/Hide Canceled Orders Option */}
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+            <div className="space-y-1">
+              <Label htmlFor="show-canceled-orders" className="text-sm font-medium">
+                Show Canceled Orders
+              </Label>
+              <p className="text-xs text-gray-500">
+                Control whether canceled orders are displayed on the Orders page
+              </p>
+            </div>
+            <Switch
+              id="show-canceled-orders"
+              checked={localShowCanceledOrders}
+              onCheckedChange={setLocalShowCanceledOrders}
+            />
+          </div>
+
           {/* Save Button */}
           <div className="flex space-x-4">
             <Button
@@ -243,7 +290,9 @@ export default function RestaurantEditPage() {
               disabled={
                 saving ||
                 !restaurantName.trim() ||
-                (restaurantName === restaurant?.name && currency === (restaurant?.settings?.currency || '$'))
+                (restaurantName === restaurant?.name && 
+                 currency === (restaurant?.settings?.currency || '$') &&
+                 localShowCanceledOrders === showCanceledOrders)
               }
               className="flex items-center space-x-2"
             >
@@ -261,7 +310,7 @@ export default function RestaurantEditPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={handleBack}
+              onClick={handleCancel}
               disabled={saving}
             >
               Cancel

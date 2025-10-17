@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrderDisplay } from '@/contexts/OrderDisplayContext'
 import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder } from '@/lib/firestore'
 import { Restaurant, Order } from '@/types'
 import { Timestamp, FieldValue, onSnapshot, collection, query, orderBy } from 'firebase/firestore'
@@ -224,6 +225,7 @@ function OrderCard({
 
 export default function OrdersPage() {
   const { user } = useAuth()
+  const { showCanceledOrders } = useOrderDisplay()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const currencySymbol: '₺' | '$' | '€' = restaurant?.settings?.currency === '₺' || restaurant?.settings?.currency === '€' || restaurant?.settings?.currency === '$'
     ? restaurant!.settings!.currency as '₺' | '$' | '€'
@@ -520,6 +522,11 @@ export default function OrdersPage() {
   const displayedOrders = useMemo(() => {
     // First filter by status
     const filteredOrders = orders.filter(order => {
+      // If canceled orders are hidden and this is a canceled order, exclude it
+      if (!showCanceledOrders && order.isCancelled) {
+        return false
+      }
+      
       switch (orderFilter) {
         case 'active':
           return !order.isCompleted && !order.isCancelled
@@ -534,7 +541,7 @@ export default function OrdersPage() {
 
     // Then apply search filter
     return searchOrders(filteredOrders, searchTerm)
-  }, [orders, orderFilter, searchTerm])
+  }, [orders, orderFilter, searchTerm, showCanceledOrders])
 
   // Group orders by date or week
   const dateGroups = useMemo(() => groupOrdersByDate(displayedOrders), [displayedOrders])
@@ -618,7 +625,7 @@ export default function OrdersPage() {
       <TestOrderNotifications />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${showCanceledOrders ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
         <StatCard
           title="Active Orders"
           value={stats.activeCount}
@@ -635,13 +642,15 @@ export default function OrdersPage() {
           isUpdating={statsUpdating}
         />
         
-        <StatCard
-          title="Cancelled Orders"
-          value={stats.cancelledCount}
-          icon={XCircle}
-          iconColor="text-red-500"
-          isUpdating={statsUpdating}
-        />
+        {showCanceledOrders && (
+          <StatCard
+            title="Cancelled Orders"
+            value={stats.cancelledCount}
+            icon={XCircle}
+            iconColor="text-red-500"
+            isUpdating={statsUpdating}
+          />
+        )}
         
         <StatCard
           title="Total Orders"
@@ -741,13 +750,15 @@ export default function OrdersPage() {
           >
             Completed Orders ({stats.completedCount})
           </Button>
-          <Button
-            variant={orderFilter === 'cancelled' ? 'default' : 'outline'}
-            onClick={() => setOrderFilter('cancelled')}
-            size="sm"
-          >
-            Cancelled Orders ({stats.cancelledCount})
-          </Button>
+          {showCanceledOrders && (
+            <Button
+              variant={orderFilter === 'cancelled' ? 'default' : 'outline'}
+              onClick={() => setOrderFilter('cancelled')}
+              size="sm"
+            >
+              Cancelled Orders ({stats.cancelledCount})
+            </Button>
+          )}
         </div>
         
         {/* Search Results Indicator */}
