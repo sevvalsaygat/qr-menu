@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '../hooks/useAuth'
 import { useOrderNotifications } from '../contexts/OrderNotificationContext'
 import { useNotificationSettings } from '../contexts/NotificationSettingsContext'
 import { logOut } from '../lib/auth'
+import { getSidebarState, saveSidebarState } from '../lib/sidebar-storage'
 import { Button } from './ui/button'
 import { AnimatedBadge } from './ui/animated-badge'
 import { 
@@ -37,8 +38,42 @@ interface SidebarProps {
   className?: string
 }
 
+/**
+ * SidebarProvider - Manages sidebar state with restaurant-specific persistence
+ * 
+ * Features:
+ * - Persists sidebar collapsed state in localStorage per restaurant
+ * - Each restaurant has independent sidebar state
+ * - Handles SSR/hydration properly to prevent mismatches
+ * - Automatically saves state changes to localStorage
+ * - Loads saved state on application startup
+ * 
+ * The sidebar state is preserved across browser sessions per restaurant,
+ * so when restaurant owners reopen the application, the sidebar will be in
+ * the same state (open/closed) as they left it, and this won't affect
+ * other restaurants' sidebar states.
+ */
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  // Initialize with default state to prevent hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load saved state from localStorage after hydration
+  useEffect(() => {
+    if (user?.uid) {
+      const savedState = getSidebarState(user.uid)
+      setIsCollapsed(savedState)
+    }
+    setIsHydrated(true)
+  }, [user?.uid])
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    if (isHydrated && user?.uid) {
+      saveSidebarState(user.uid, isCollapsed)
+    }
+  }, [isCollapsed, isHydrated, user?.uid])
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
