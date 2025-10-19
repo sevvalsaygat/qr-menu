@@ -66,6 +66,7 @@ export default function ProductsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isWarningDialogOpen, setIsWarningDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
 
@@ -201,12 +202,24 @@ export default function ProductsPage() {
       return
     }
 
+    // Check for duplicate product name
+    const trimmedName = formData.name.trim()
+    const existingProduct = products.find(
+      product => product.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+    
+    if (existingProduct) {
+      setIsCreateDialogOpen(false)
+      setIsWarningDialogOpen(true)
+      return
+    }
+
     try {
       setSubmitting(true)
       setError('')
       
       const productData = {
-        name: formData.name.trim(),
+        name: trimmedName,
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         categoryId: formData.categoryId,
@@ -235,12 +248,25 @@ export default function ProductsPage() {
     e.preventDefault()
     if (!restaurantId || !selectedProduct) return
 
+    // Check for duplicate product name (excluding current product)
+    const trimmedName = formData.name.trim()
+    const existingProduct = products.find(
+      product => product.id !== selectedProduct.id && 
+      product.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+    
+    if (existingProduct) {
+      setIsEditDialogOpen(false)
+      setIsWarningDialogOpen(true)
+      return
+    }
+
     try {
       setSubmitting(true)
       setError('')
       
       const productData = {
-        name: formData.name.trim(),
+        name: trimmedName,
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         categoryId: formData.categoryId,
@@ -944,6 +970,26 @@ export default function ProductsPage() {
             >
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Warning Dialog */}
+      <Dialog open={isWarningDialogOpen} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-red-700">Product Already Exists!</DialogTitle>
+            <DialogDescription className="text-red-700">
+              This product already exists in your menu.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter>
+            <Button 
+              onClick={() => setIsWarningDialogOpen(false)} className="cursor-pointer"
+            >
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>
