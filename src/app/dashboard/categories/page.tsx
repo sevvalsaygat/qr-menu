@@ -54,6 +54,7 @@ export default function CategoriesPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isLastCategoryWarningOpen, setIsLastCategoryWarningOpen] = useState(false)
+  const [isCategoryWarningDialogOpen, setIsCategoryWarningDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([])
@@ -149,12 +150,24 @@ export default function CategoriesPage() {
     e.preventDefault()
     if (!restaurantId) return
 
+    // Check for duplicate category name
+    const trimmedName = formData.name.trim()
+    const existingCategory = categories.find(
+      category => category.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+    
+    if (existingCategory) {
+      setIsCreateDialogOpen(false)
+      setIsCategoryWarningDialogOpen(true)
+      return
+    }
+
     try {
       setSubmitting(true)
       setError('')
       
       const categoryData = {
-        name: formData.name.trim(),
+        name: trimmedName,
         description: formData.description.trim(),
         displayOrder: formData.displayOrder ? parseInt(formData.displayOrder) : getNextDisplayOrder(),
         isVisible: formData.isVisible
@@ -177,12 +190,25 @@ export default function CategoriesPage() {
     e.preventDefault()
     if (!restaurantId || !selectedCategory) return
 
+    // Check for duplicate category name (excluding current category)
+    const trimmedName = formData.name.trim()
+    const existingCategory = categories.find(
+      category => category.id !== selectedCategory.id && 
+      category.name.toLowerCase() === trimmedName.toLowerCase()
+    )
+    
+    if (existingCategory) {
+      setIsEditDialogOpen(false)
+      setIsCategoryWarningDialogOpen(true)
+      return
+    }
+
     try {
       setSubmitting(true)
       setError('')
       
       const categoryData = {
-        name: formData.name.trim(),
+        name: trimmedName,
         description: formData.description.trim(),
         displayOrder: formData.displayOrder ? parseInt(formData.displayOrder) : selectedCategory.displayOrder,
         isVisible: formData.isVisible
@@ -730,6 +756,26 @@ export default function CategoriesPage() {
               onClick={() => setIsLastCategoryWarningOpen(false)}
             >
               Understood
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Duplicate Warning Dialog */}
+      <Dialog open={isCategoryWarningDialogOpen} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-red-700">Category Already Exists!</DialogTitle>
+            <DialogDescription className="text-red-700">
+              This category already exists in your menu.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter>
+            <Button 
+              onClick={() => setIsCategoryWarningDialogOpen(false)} className="cursor-pointer"
+            >
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>
