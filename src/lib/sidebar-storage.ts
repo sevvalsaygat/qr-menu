@@ -1,15 +1,3 @@
-/**
- * Utility functions for persisting sidebar state in localStorage
- * 
- * RESTAURANT-SPECIFIC STORAGE:
- * Each restaurant has its own independent sidebar state stored with a unique key.
- * This ensures that when Restaurant A collapses their sidebar, it doesn't affect
- * Restaurant B's sidebar state. Each restaurant owner can have their own preference.
- * 
- * Storage Key Format: 'qr-menu-sidebar-collapsed-{restaurantId}'
- * Example: 'qr-menu-sidebar-collapsed-user123' for restaurant with ID 'user123'
- */
-
 const SIDEBAR_STORAGE_PREFIX = 'qr-menu-sidebar-collapsed'
 
 /**
