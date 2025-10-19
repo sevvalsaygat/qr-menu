@@ -38,21 +38,6 @@ interface SidebarProps {
   className?: string
 }
 
-/**
- * SidebarProvider - Manages sidebar state with restaurant-specific persistence
- * 
- * Features:
- * - Persists sidebar collapsed state in localStorage per restaurant
- * - Each restaurant has independent sidebar state
- * - Handles SSR/hydration properly to prevent mismatches
- * - Automatically saves state changes to localStorage
- * - Loads saved state on application startup
- * 
- * The sidebar state is preserved across browser sessions per restaurant,
- * so when restaurant owners reopen the application, the sidebar will be in
- * the same state (open/closed) as they left it, and this won't affect
- * other restaurants' sidebar states.
- */
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   // Initialize with default state to prevent hydration mismatch
