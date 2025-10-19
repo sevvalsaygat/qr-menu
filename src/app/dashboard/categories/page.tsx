@@ -11,7 +11,6 @@ import {
   getUserRestaurants,
   createRestaurant,
   getProductsByCategory,
-  bulkReassignProductsCategory,
   getCategoryProductCounts
 } from '../../../lib/firestore'
 import { getUserData } from '../../../lib/auth'
@@ -36,13 +35,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../components/ui/dropdown-menu'
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../components/ui/select'
 import { Switch } from '../../../components/ui/switch'
 import { Textarea } from '../../../components/ui/textarea'
 import { Plus, MoreHorizontal, Edit, Trash2, ShoppingBag, Loader2, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react'
@@ -61,13 +53,10 @@ export default function CategoriesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [isProductReassignDialogOpen, setIsProductReassignDialogOpen] = useState(false)
   const [isLastCategoryWarningOpen, setIsLastCategoryWarningOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([])
-  const [selectedTargetCategoryId, setSelectedTargetCategoryId] = useState<string>('')
-  const [reassignmentError, setReassignmentError] = useState('')
 
   // Form data
   const [formData, setFormData] = useState({
@@ -220,15 +209,21 @@ export default function CategoriesPage() {
       setSubmitting(true)
       setError('')
       
-      // Delete the category (this should only be called for categories with no products)
+      // Delete the category (this will also delete any products in the category)
       await deleteCategory(restaurantId, selectedCategory.id)
       
       // Reorder remaining categories to fill the gap
       await reorderCategoriesAfterDelete(selectedCategory.displayOrder)
       
-      setSuccess('Category deleted successfully!')
+      const productCount = categoryProducts.length
+      const successMessage = productCount > 0 
+        ? `Category and ${productCount} product${productCount !== 1 ? 's' : ''} deleted successfully!`
+        : 'Category deleted successfully!'
+      
+      setSuccess(successMessage)
       setIsDeleteDialogOpen(false)
       setSelectedCategory(null)
+      setCategoryProducts([])
       loadData()
     } catch (err) {
       setError('Failed to delete category')
@@ -238,49 +233,6 @@ export default function CategoriesPage() {
     }
   }
 
-  const handleProductReassignmentAndDelete = async () => {
-    if (!restaurantId || !selectedCategory) return
-
-    // Validate that a target category is selected
-    if (!selectedTargetCategoryId) {
-      setReassignmentError('Please select a category to move the products to.')
-      return
-    }
-
-    // Prevent reassigning to the same category
-    if (selectedTargetCategoryId === selectedCategory.id) {
-      setReassignmentError('Please select a different category.')
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      setError('')
-      setReassignmentError('')
-      
-      // Reassign all products to the selected category
-      const productIds = categoryProducts.map(product => product.id)
-      await bulkReassignProductsCategory(restaurantId, productIds, selectedTargetCategoryId)
-      
-      // Delete the category
-      await deleteCategory(restaurantId, selectedCategory.id)
-      
-      // Reorder remaining categories to fill the gap
-      await reorderCategoriesAfterDelete(selectedCategory.displayOrder)
-      
-      setSuccess(`Category deleted successfully! ${categoryProducts.length} product(s) moved to the selected category.`)
-      setIsProductReassignDialogOpen(false)
-      setSelectedCategory(null)
-      setCategoryProducts([])
-      setSelectedTargetCategoryId('')
-      loadData()
-    } catch (err) {
-      setError('Failed to delete category and reassign products')
-      console.error(err)
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   const reorderCategoriesAfterDelete = useCallback(async (deletedDisplayOrder: number) => {
     try {
@@ -363,19 +315,12 @@ export default function CategoriesPage() {
         return
       }
       
-      // Check if category has products
+      // Load category products to show appropriate message
       const products = await getProductsByCategory(restaurantId, category.id)
       setCategoryProducts(products)
       
-      if (products.length > 0) {
-        // Category has products, show reassignment dialog
-        setSelectedTargetCategoryId('')
-        setReassignmentError('')
-        setIsProductReassignDialogOpen(true)
-      } else {
-        // Category has no products, show simple delete dialog
-        setIsDeleteDialogOpen(true)
-      }
+      // Show delete confirmation dialog with appropriate message
+      setIsDeleteDialogOpen(true)
     } catch (err) {
       setError('Failed to check category products')
       console.error(err)
@@ -531,12 +476,14 @@ export default function CategoriesPage() {
             .map((category, index) => (
               <Card 
                 key={category.id} 
-                className="relative cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleCategoryClick(category)}
+                className="relative hover:shadow-md transition-shadow"
               >
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                    <div 
+                      className="flex-1 cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-md transition-colors"
+                      onClick={() => handleCategoryClick(category)}
+                    >
                       <div className="flex items-center space-x-2">
                         <CardTitle className="text-lg">{category.name}</CardTitle>
                         {!category.isVisible && (
@@ -545,7 +492,7 @@ export default function CategoriesPage() {
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
                         {productCounts[category.id] || 0} product{(productCounts[category.id] || 0) !== 1 ? 's' : ''}
-                        <span className="text-xs text-blue-600 ml-2"></span>
+                        <span className="text-xs text-blue-600 ml-2">Click to view products</span>
                       </div>
                       {category.description && (
                         <CardDescription className="mt-1">
@@ -559,7 +506,6 @@ export default function CategoriesPage() {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -622,20 +568,14 @@ export default function CategoriesPage() {
                     <Button 
                       variant="outline" 
                       className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openEditDialog(category)
-                      }}
+                      onClick={() => openEditDialog(category)}
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
                     <Button 
                       variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleVisibility(category)
-                      }}
+                      onClick={() => toggleVisibility(category)}
                     >
                       {category.isVisible ? (
                         <EyeOff className="h-4 w-4" />
@@ -717,14 +657,24 @@ export default function CategoriesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog - for categories with no products */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Category</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{selectedCategory?.name}&rdquo;? This action cannot be undone.
-              The remaining categories will be automatically reordered.
+              {categoryProducts.length > 0 ? (
+                <>
+                  Deleting this category will also delete {categoryProducts.length} product{categoryProducts.length !== 1 ? 's' : ''} inside it. This action cannot be undone.
+                  <br />
+                  <br />
+                  Are you sure you want to delete it?
+                </>
+              ) : (
+                <>
+                  This category is empty. Are you sure you want to delete it?
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           
@@ -748,91 +698,6 @@ export default function CategoriesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Product Reassignment Dialog - for categories with products */}
-      <Dialog open={isProductReassignDialogOpen} onOpenChange={setIsProductReassignDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Delete Category with Products</DialogTitle>
-            <DialogDescription>
-              The category &ldquo;{selectedCategory?.name}&rdquo; contains {categoryProducts.length} product(s).
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-md">
-              <p className="text-sm text-orange-800">
-                <strong>Which category would you like to move the products in this category to?</strong> 
-              </p>
-            </div>
-
-            {categoryProducts.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="products-list">Products to be moved:</Label>
-                <div className="max-h-32 overflow-y-auto bg-gray-50 p-3 rounded-md">
-                  <ul className="text-sm space-y-1">
-                    {categoryProducts.map(product => (
-                      <li key={product.id} className="flex items-center space-x-2">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
-                        <span>{product.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="target-category">Select Target Category *</Label>
-              <Select
-                value={selectedTargetCategoryId}
-                onValueChange={setSelectedTargetCategoryId}
-                disabled={submitting}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a category to move products to" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories
-                    .filter(cat => cat.id !== selectedCategory?.id)
-                    .map(category => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {reassignmentError && (
-              <Alert variant="destructive">
-                <AlertDescription>{reassignmentError}</AlertDescription>
-              </Alert>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsProductReassignDialogOpen(false)
-                setSelectedTargetCategoryId('')
-                setReassignmentError('')
-              }}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleProductReassignmentAndDelete}
-              disabled={submitting}
-            >
-              {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Move Products & Delete Category
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Last Category Warning Dialog */}
       <Dialog open={isLastCategoryWarningOpen} onOpenChange={setIsLastCategoryWarningOpen}>

@@ -233,6 +233,18 @@ export const updateCategory = async (
 
 export const deleteCategory = async (restaurantId: string, categoryId: string): Promise<void> => {
   try {
+    // First, get all products that belong to this category
+    const productsQuery = query(
+      collection(db, 'restaurants', restaurantId, 'products'),
+      where('categoryId', '==', categoryId)
+    )
+    const productsSnapshot = await getDocs(productsQuery)
+    
+    // Delete all products in this category
+    const productDeletePromises = productsSnapshot.docs.map(doc => deleteDoc(doc.ref))
+    await Promise.all(productDeletePromises)
+    
+    // Then delete the category itself
     await deleteDoc(doc(db, 'restaurants', restaurantId, 'categories', categoryId))
   } catch (error) {
     console.error('Error deleting category:', error)
