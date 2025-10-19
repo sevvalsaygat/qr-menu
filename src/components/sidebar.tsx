@@ -89,7 +89,7 @@ export function MainContent({ children }: { children: React.ReactNode }) {
   return (
     <div className={cn(
       "flex-1 transition-all duration-300",
-      isCollapsed ? "ml-16" : "ml-56"
+      isCollapsed ? "ml-20" : "ml-56"
     )}>
       <main className="p-8">
         {children}
@@ -124,11 +124,14 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div className={cn(
       "flex flex-col bg-white border-r border-gray-200 transition-all duration-300",
-      isCollapsed ? "w-16" : "w-56",
+      isCollapsed ? "w-20" : "w-56",
       className
     )}>
       {/* Header with Logo, Restaurant Name and Collapse Toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className={cn(
+        "flex items-center border-b border-gray-200",
+        isCollapsed ? "justify-between p-4" : "justify-between p-4"
+      )}>
         <div className={cn('flex items-center', isCollapsed ? '' : 'space-x-3')}>
           <div className="h-8 w-8 rounded-md bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
             {user?.photoURL ? (
@@ -154,7 +157,7 @@ export function Sidebar({ className }: SidebarProps) {
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 p-0 hover:bg-gray-100"
+          className="h-8 w-8 p-0 hover:bg-transparent cursor-pointer"
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
