@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '../hooks/useAuth'
 import { useOrderNotifications } from '../contexts/OrderNotificationContext'
 import { useNotificationSettings } from '../contexts/NotificationSettingsContext'
 import { logOut } from '../lib/auth'
+import { getSidebarState, saveSidebarState } from '../lib/sidebar-storage'
 import { Button } from './ui/button'
 import { AnimatedBadge } from './ui/animated-badge'
 import { 
@@ -38,7 +39,26 @@ interface SidebarProps {
 }
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  // Initialize with default state to prevent hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load saved state from localStorage after hydration
+  useEffect(() => {
+    if (user?.uid) {
+      const savedState = getSidebarState(user.uid)
+      setIsCollapsed(savedState)
+    }
+    setIsHydrated(true)
+  }, [user?.uid])
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    if (isHydrated && user?.uid) {
+      saveSidebarState(user.uid, isCollapsed)
+    }
+  }, [isCollapsed, isHydrated, user?.uid])
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
@@ -54,7 +74,7 @@ export function MainContent({ children }: { children: React.ReactNode }) {
   return (
     <div className={cn(
       "flex-1 transition-all duration-300",
-      isCollapsed ? "ml-16" : "ml-56"
+      isCollapsed ? "ml-20" : "ml-56"
     )}>
       <main className="p-8">
         {children}
@@ -89,11 +109,14 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div className={cn(
       "flex flex-col bg-white border-r border-gray-200 transition-all duration-300",
-      isCollapsed ? "w-16" : "w-56",
+      isCollapsed ? "w-20" : "w-56",
       className
     )}>
       {/* Header with Logo, Restaurant Name and Collapse Toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className={cn(
+        "flex items-center border-b border-gray-200",
+        isCollapsed ? "justify-between p-4" : "justify-between p-4"
+      )}>
         <div className={cn('flex items-center', isCollapsed ? '' : 'space-x-3')}>
           <div className="h-8 w-8 rounded-md bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
             {user?.photoURL ? (
@@ -119,7 +142,7 @@ export function Sidebar({ className }: SidebarProps) {
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 p-0 hover:bg-gray-100"
+          className="h-8 w-8 p-0 hover:bg-transparent cursor-pointer"
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
