@@ -23,7 +23,7 @@ function CustomerMenuPageContent() {
   const restaurantId = params.restaurantId as string
   const tableId = params.tableId as string
 
-  const { addToCart, clearCart, items: cartItems, getTotalPrice } = useCart()
+  const { addToCart, clearCart, items: cartItems, getTotalPrice, setIsOpen } = useCart()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [table, setTable] = useState<Table | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
@@ -261,6 +261,8 @@ function CustomerMenuPageContent() {
                 <div className="flex gap-2">
                   <Button 
                     onClick={() => {
+                      clearCart()
+                      setIsOpen(false)
                       setOrderConfirmation(null)
                       setSelectedCategory('all')
                     }}
