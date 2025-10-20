@@ -12,7 +12,7 @@ import { QrCode, Users, ShoppingBag, BarChart3, Plus, Loader2, DollarSign } from
 import { formatCurrency } from '../../lib/utils'
 import MonthlyRevenueBarChart from '../../components/charts/MonthlyRevenueBarChart'
 import DailyRevenueAreaChart from '../../components/charts/DailyRevenueAreaChart'
-import { calculateMonthlyRevenueData, generateSampleMonthlyRevenueData, MonthlyRevenueStats, calculateDailyRevenueData, generateSampleDailyRevenueData, testSep11Detection, DailyRevenueStats } from '../../lib/monthly-revenue-analytics'
+import { calculateMonthlyRevenueData, generateZeroMonthlyRevenueData, MonthlyRevenueStats, calculateDailyRevenueData, generateZeroDailyRevenueData, testSep11Detection, DailyRevenueStats } from '../../lib/monthly-revenue-analytics'
 
 interface DashboardStats {
   totalTables: number
@@ -139,9 +139,9 @@ export default function DashboardHome() {
       // Get user's restaurant
       const restaurants = await getUserRestaurants(user.uid)
       if (restaurants.length === 0) {
-        // Use sample data if no restaurant found
-        const sampleData = generateSampleMonthlyRevenueData(6)
-        setMonthlyRevenueData(sampleData)
+        // Use zero data for new users if no restaurant found
+        const zeroData = generateZeroMonthlyRevenueData(6)
+        setMonthlyRevenueData(zeroData)
         return
       }
 
@@ -151,24 +151,24 @@ export default function DashboardHome() {
       try {
         const revenueData = await calculateMonthlyRevenueData(restaurantId, 6)
         
-        // Check if we got real data or if we need sample data
+        // Check if we got real data or if we need zero data for new users
         if (revenueData.totalRevenue > 0) {
           setMonthlyRevenueData(revenueData)
         } else {
-          const sampleData = generateSampleMonthlyRevenueData(6)
-          setMonthlyRevenueData(sampleData)
+          const zeroData = generateZeroMonthlyRevenueData(6)
+          setMonthlyRevenueData(zeroData)
         }
       } catch (revenueError) {
-        console.error('❌ Error loading monthly revenue data, using sample data:', revenueError)
-        const sampleData = generateSampleMonthlyRevenueData(6)
-        setMonthlyRevenueData(sampleData)
+        console.error('❌ Error loading monthly revenue data, using zero data:', revenueError)
+        const zeroData = generateZeroMonthlyRevenueData(6)
+        setMonthlyRevenueData(zeroData)
       }
 
     } catch (error) {
       console.error('Error loading monthly revenue data:', error)
-      // Use sample data as fallback
-      const sampleData = generateSampleMonthlyRevenueData(6)
-      setMonthlyRevenueData(sampleData)
+      // Use zero data as fallback for new users
+      const zeroData = generateZeroMonthlyRevenueData(6)
+      setMonthlyRevenueData(zeroData)
     } finally {
       setChartLoading(false)
     }
@@ -184,9 +184,9 @@ export default function DashboardHome() {
       // Get user's restaurant
       const restaurants = await getUserRestaurants(user.uid)
       if (restaurants.length === 0) {
-        // Use sample data if no restaurant found
-        const sampleData = generateSampleDailyRevenueData(14)
-        setDailyRevenueData(sampleData)
+        // Use zero data for new users if no restaurant found
+        const zeroData = generateZeroDailyRevenueData(14)
+        setDailyRevenueData(zeroData)
         return
       }
 
@@ -196,22 +196,22 @@ export default function DashboardHome() {
       try {
         const revenueData = await calculateDailyRevenueData(restaurantId, 14)
         
-        // Check if we got real data or if we need sample data
+        // Check if we got real data or if we need zero data for new users
         if (revenueData.totalRevenue > 0) {
           setDailyRevenueData(revenueData)
         } else {
-          const sampleData = generateSampleDailyRevenueData(14)
-          setDailyRevenueData(sampleData)
+          const zeroData = generateZeroDailyRevenueData(14)
+          setDailyRevenueData(zeroData)
         }
       } catch (revenueError) {
-        console.error('❌ Error loading daily revenue data, using sample data:', revenueError)
-        const sampleData = generateSampleDailyRevenueData(14)
-        setDailyRevenueData(sampleData)
+        console.error('❌ Error loading daily revenue data, using zero data:', revenueError)
+        const zeroData = generateZeroDailyRevenueData(14)
+        setDailyRevenueData(zeroData)
       }
     } catch (error) {
       console.error('Error loading daily revenue data:', error)
-      const sampleData = generateSampleDailyRevenueData(14)
-      setDailyRevenueData(sampleData)
+      const zeroData = generateZeroDailyRevenueData(14)
+      setDailyRevenueData(zeroData)
     } finally {
       setDailyChartLoading(false)
     }
@@ -238,6 +238,7 @@ export default function DashboardHome() {
         // Reload dashboard stats and revenue data when orders change
         loadDashboardStats()
         loadDailyRevenueData()
+        loadMonthlyRevenueData()
       }, (error) => {
         console.error('Error setting up real-time order listener:', error)
       })
@@ -247,7 +248,7 @@ export default function DashboardHome() {
     } catch (error) {
       console.error('Error setting up real-time listeners:', error)
     }
-  }, [user, loadDashboardStats, loadDailyRevenueData])
+  }, [user, loadDashboardStats, loadDailyRevenueData, loadMonthlyRevenueData])
 
   // Listen for restaurant changes to update currency
   useEffect(() => {

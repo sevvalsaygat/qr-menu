@@ -242,7 +242,50 @@ export function testSep11Detection(): void {
 }
 
 /**
- * Generate sample daily revenue data for demonstration
+ * Generate zero-based daily revenue data for new users
+ */
+export const generateZeroDailyRevenueData = (days: number = 14): DailyRevenueStats => {
+  const data: DailyRevenueData[] = []
+  
+  // Create date range for the last N days (including today)
+  const endDate = new Date()
+  endDate.setHours(23, 59, 59, 999) // End of today
+  
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days + 1) // Include today
+  startDate.setHours(0, 0, 0, 0)
+
+  // Generate data for exactly N days with zero revenue
+  for (let i = 0; i < days; i++) {
+    const dayDate = new Date(startDate)
+    dayDate.setDate(startDate.getDate() + i)
+    
+    // Use local date to avoid timezone issues
+    const year = dayDate.getFullYear()
+    const month = String(dayDate.getMonth() + 1).padStart(2, '0')
+    const day = String(dayDate.getDate()).padStart(2, '0')
+    const dayKey = `${year}-${month}-${day}`
+    
+    const dateName = dayDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    })
+    
+    data.push({
+      date: dayKey,
+      dateName,
+      revenue: 0 // All revenue starts at zero for new users
+    })
+  }
+
+  return {
+    totalRevenue: 0,
+    data
+  }
+}
+
+/**
+ * Generate sample daily revenue data for demonstration (kept for testing purposes)
  */
 export const generateSampleDailyRevenueData = (days: number = 14): DailyRevenueStats => {
   const data: DailyRevenueData[] = []
@@ -307,7 +350,48 @@ export const generateSampleDailyRevenueData = (days: number = 14): DailyRevenueS
 }
 
 /**
- * Generate sample monthly revenue data for demonstration
+ * Generate zero-based monthly revenue data for new users
+ */
+export const generateZeroMonthlyRevenueData = (months: number = 6): MonthlyRevenueStats => {
+  const data: MonthlyRevenueData[] = []
+  
+  // Create date range for the last N months (including current month)
+  const endDate = new Date()
+  endDate.setHours(23, 59, 59, 999) // End of today
+  
+  const startDate = new Date()
+  startDate.setMonth(startDate.getMonth() - months + 1) // Include current month
+  startDate.setDate(1) // First day of the month
+  startDate.setHours(0, 0, 0, 0)
+
+  // Generate data for exactly N months with zero revenue
+  for (let i = 0; i < months; i++) {
+    const monthDate = new Date(startDate)
+    monthDate.setMonth(startDate.getMonth() + i)
+    
+    const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`
+    const monthName = monthDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      year: 'numeric' 
+    })
+    
+    data.push({
+      month: monthKey,
+      monthName,
+      revenue: 0, // All revenue starts at zero for new users
+      weeklyRevenue: undefined // No weekly revenue for new users
+    })
+  }
+
+  return {
+    totalRevenue: 0,
+    growthPercentage: 0, // No growth for new users
+    data
+  }
+}
+
+/**
+ * Generate sample monthly revenue data for demonstration (kept for testing purposes)
  */
 export const generateSampleMonthlyRevenueData = (months: number = 6): MonthlyRevenueStats => {
   const data: MonthlyRevenueData[] = []
