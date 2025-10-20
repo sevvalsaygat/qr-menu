@@ -19,12 +19,14 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [username, setUsername] = useState('')
   const [showPasswordTooltip, setShowPasswordTooltip] = useState(false)
   const [passwordMatchError, setPasswordMatchError] = useState('')
   const hideTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const formRef = useRef<HTMLFormElement | null>(null)
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
 
@@ -109,7 +111,7 @@ export default function AuthPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form ref={formRef} autoComplete="off" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -119,6 +121,9 @@ export default function AuthPage() {
                 placeholder="Enter your email"
                 required
                 disabled={submitting}
+                autoComplete="off"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
@@ -151,6 +156,7 @@ export default function AuthPage() {
                   disabled={submitting}
                   minLength={8}
                   className="pr-10"
+                  autoComplete="off"
                   value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => {
@@ -210,6 +216,7 @@ export default function AuthPage() {
                     disabled={submitting}
                     minLength={6}
                     className={`pr-10 ${passwordMatchError ? 'border-red-500' : ''}`}
+                    autoComplete="off"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     onBlur={validatePasswordMatch}
@@ -276,6 +283,7 @@ export default function AuthPage() {
                   placeholder="Enter your restaurant name"
                   required
                   disabled={submitting}
+                  autoComplete="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -313,11 +321,13 @@ export default function AuthPage() {
                 setSuccess('')
                 setShowPassword(false)
                 setShowConfirmPassword(false)
+                setEmail('')
                 setPassword('')
                 setConfirmPassword('')
                 setUsername('')
                 setShowPasswordTooltip(false)
                 setPasswordMatchError('')
+                if (formRef.current) formRef.current.reset()
               }}
               className="text-sm text-blue-600 hover:text-blue-800 underline"
               disabled={submitting}
