@@ -69,6 +69,8 @@ export default function ProductsPage() {
   const [isWarningDialogOpen, setIsWarningDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [categoryError, setCategoryError] = useState('')
+  const [editCategoryError, setEditCategoryError] = useState('')
 
   // Form data
   const [formData, setFormData] = useState({
@@ -190,11 +192,20 @@ export default function ProductsPage() {
       preparationTime: '',
       image: null
     })
+    setCategoryError('')
+    setEditCategoryError('')
   }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!restaurantId) return
+
+    // Validate required category
+    if (!formData.categoryId || formData.categoryId.trim() === '') {
+      setCategoryError('Category is required')
+      return
+    }
+    setCategoryError('')
 
     // Validate required image
     if (!formData.image) {
@@ -218,17 +229,30 @@ export default function ProductsPage() {
       setSubmitting(true)
       setError('')
       
-      const productData = {
+      const productData: {
+        name: string
+        description: string
+        price: number
+        categoryId: string
+        isAvailable: boolean
+        isFeatured: boolean
+        imageUrl: string
+        preparationTime?: number
+      } = {
         name: trimmedName,
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         categoryId: formData.categoryId,
         isAvailable: formData.isAvailable,
         isFeatured: formData.isFeatured,
-        preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined,
         // For now, we'll store the image as a placeholder URL
         // In a real implementation, you would upload to Firebase Storage
         imageUrl: 'placeholder-image-url'
+      }
+
+      // Only include preparationTime if it has a value (Firestore doesn't accept undefined)
+      if (formData.preparationTime && formData.preparationTime.trim() !== '') {
+        productData.preparationTime = parseInt(formData.preparationTime)
       }
 
       await createProduct(restaurantId, productData)
@@ -248,6 +272,13 @@ export default function ProductsPage() {
     e.preventDefault()
     if (!restaurantId || !selectedProduct) return
 
+    // Validate required category
+    if (!formData.categoryId || formData.categoryId.trim() === '') {
+      setEditCategoryError('Category is required')
+      return
+    }
+    setEditCategoryError('')
+
     // Check for duplicate product name (excluding current product)
     const trimmedName = formData.name.trim()
     const existingProduct = products.find(
@@ -265,14 +296,26 @@ export default function ProductsPage() {
       setSubmitting(true)
       setError('')
       
-      const productData = {
+      const productData: {
+        name: string
+        description: string
+        price: number
+        categoryId: string
+        isAvailable: boolean
+        isFeatured: boolean
+        preparationTime?: number
+      } = {
         name: trimmedName,
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         categoryId: formData.categoryId,
         isAvailable: formData.isAvailable,
-        isFeatured: formData.isFeatured,
-        preparationTime: formData.preparationTime ? parseInt(formData.preparationTime) : undefined
+        isFeatured: formData.isFeatured
+      }
+
+      // Only include preparationTime if it has a value (Firestore doesn't accept undefined)
+      if (formData.preparationTime && formData.preparationTime.trim() !== '') {
+        productData.preparationTime = parseInt(formData.preparationTime)
       }
 
       await updateProduct(restaurantId, selectedProduct.id, productData)
@@ -345,6 +388,7 @@ export default function ProductsPage() {
       preparationTime: product.preparationTime?.toString() || '',
       image: null // Reset image for edit dialog
     })
+    setEditCategoryError('')
     setIsEditDialogOpen(true)
   }
 
@@ -399,7 +443,12 @@ export default function ProductsPage() {
           )}
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+          setIsCreateDialogOpen(open)
+          if (!open) {
+            resetForm()
+          }
+        }}>
           <DialogTrigger asChild>
             <Button onClick={resetForm} disabled={categories.length === 0}>
               <Plus className="h-4 w-4 mr-2" />
@@ -512,11 +561,14 @@ export default function ProductsPage() {
                 <Label htmlFor="categoryId">Category *</Label>
                 <Select
                   value={formData.categoryId}
-                  onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, categoryId: value })
+                    setCategoryError('')
+                  }}
                   disabled={submitting}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={categoryError ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -527,6 +579,9 @@ export default function ProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {categoryError && (
+                  <p className="text-sm text-red-600">{categoryError}</p>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -828,7 +883,14 @@ export default function ProductsPage() {
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open)
+        if (!open) {
+          setEditCategoryError('')
+          setSelectedProduct(null)
+          resetForm()
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
@@ -896,11 +958,14 @@ export default function ProductsPage() {
               <Label htmlFor="edit-categoryId">Category *</Label>
               <Select
                 value={formData.categoryId}
-                onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, categoryId: value })
+                  setEditCategoryError('')
+                }}
                 disabled={submitting}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className={editCategoryError ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -911,6 +976,9 @@ export default function ProductsPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {editCategoryError && (
+                <p className="text-sm text-red-600">{editCategoryError}</p>
+              )}
             </div>
 
             <div className="space-y-3">
