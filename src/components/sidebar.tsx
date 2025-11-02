@@ -19,7 +19,8 @@ import {
   Settings, 
   ChevronLeft, 
   ChevronRight,
-  LogOut
+  LogOut,
+  Loader2
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 
@@ -90,6 +91,8 @@ export function Sidebar({ className }: SidebarProps) {
   const { userData, user } = useAuth()
   const { totalActiveOrders } = useOrderNotifications()
   const { showOrderCount } = useNotificationSettings()
+  // Show loading animation until restaurant name data is loaded
+  const isLoadingRestaurantName = user && !userData?.restaurantName
 
   const handleSignOut = async () => {
     const result = await logOut()
@@ -118,7 +121,7 @@ export function Sidebar({ className }: SidebarProps) {
         isCollapsed ? "justify-between p-4" : "justify-between p-4"
       )}>
         <div className={cn('flex items-center', isCollapsed ? '' : 'space-x-3')}>
-          <div className="h-8 w-8 rounded-md bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center">
+          <div className="h-8 w-8 rounded-md bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0">
             {user?.photoURL ? (
               <Image
                 src={user.photoURL}
@@ -133,9 +136,19 @@ export function Sidebar({ className }: SidebarProps) {
             )}
           </div>
           {!isCollapsed && (
-            <h1 className="text-lg font-semibold text-gray-900 truncate">
-              {userData?.restaurantName || 'QR Menu'}
-            </h1>
+            <div className="flex-1 min-w-0">
+              {isLoadingRestaurantName ? (
+                <div className="flex items-center justify-center h-7">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                userData?.restaurantName && (
+                  <h1 className="text-lg font-semibold text-gray-900 truncate">
+                    {userData.restaurantName}
+                  </h1>
+                )
+              )}
+            </div>
           )}
         </div>
         <Button
