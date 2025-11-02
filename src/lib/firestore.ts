@@ -584,6 +584,89 @@ export const uncancelOrder = async (
   }
 }
 
+export const removeItemFromOrder = async (
+  restaurantId: string,
+  orderId: string,
+  itemIndex: number
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    const orderDoc = await getDoc(orderRef)
+    
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found')
+    }
+    
+    const orderData = orderDoc.data() as Order
+    const currentItems = orderData.items || []
+    
+    // Check if item index is valid
+    if (itemIndex < 0 || itemIndex >= currentItems.length) {
+      throw new Error('Invalid item index')
+    }
+    
+    const itemToUpdate = currentItems[itemIndex]
+    
+    // If quantity is greater than 1, decrease quantity by 1
+    // If quantity is 1, remove the item completely
+    let updatedItems: typeof currentItems
+    if (itemToUpdate.quantity > 1) {
+      // Decrease quantity by 1 and recalculate subtotal
+      const newQuantity = itemToUpdate.quantity - 1
+      const pricePerUnit = itemToUpdate.subtotal / itemToUpdate.quantity
+      const newSubtotal = pricePerUnit * newQuantity
+      
+      updatedItems = currentItems.map((item, index) => 
+        index === itemIndex
+          ? { ...item, quantity: newQuantity, subtotal: newSubtotal }
+          : item
+      )
+    } else {
+      // Remove the item completely
+      updatedItems = currentItems.filter((_, index) => index !== itemIndex)
+    }
+    
+    // Recalculate order totals
+    const newSubtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0)
+    // Calculate tax rate from original order, or default to 0 if no subtotal
+    const originalSubtotal = orderData.summary.subtotal || 0
+    const taxRate = originalSubtotal > 0 ? orderData.summary.tax / originalSubtotal : 0
+    const newTax = newSubtotal * taxRate
+    const newTotal = newSubtotal + newTax
+    const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+    
+    // If no items remain, cancel the order
+    if (updatedItems.length === 0) {
+      await updateDoc(orderRef, {
+        items: updatedItems,
+        summary: {
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+          itemCount: 0
+        },
+        isCancelled: true,
+        cancelledAt: serverTimestamp(),
+        cancelledBy: 'restaurant'
+      })
+    } else {
+      // Update order with new items and recalculated totals
+      await updateDoc(orderRef, {
+        items: updatedItems,
+        summary: {
+          subtotal: newSubtotal,
+          tax: newTax,
+          total: newTotal,
+          itemCount: newItemCount
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error removing item from order:', error)
+    throw new Error('Failed to remove item from order')
+  }
+}
+
 // Helper functions
 
 // Get products by specific category

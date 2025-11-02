@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrderDisplay } from '@/contexts/OrderDisplayContext'
-import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder } from '@/lib/firestore'
+import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder, removeItemFromOrder } from '@/lib/firestore'
 import { Restaurant, Order } from '@/types'
 import { Timestamp, FieldValue, onSnapshot, collection, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -82,6 +82,7 @@ interface OrderCardProps {
   onMarkAsActive: (orderId: string) => void
   onCancelOrder: (orderId: string) => void
   onUncancelOrder: (orderId: string) => void
+  onRemoveItem: (orderId: string, itemIndex: number) => void
   getTimeAgo: (timestamp: Timestamp | FieldValue | null | undefined) => string
   currencySymbol: '₺' | '$' | '€'
 }
@@ -93,9 +94,12 @@ function OrderCard({
   onMarkAsActive, 
   onCancelOrder, 
   onUncancelOrder,
+  onRemoveItem,
   getTimeAgo,
   currencySymbol
 }: OrderCardProps) {
+  // Allow canceling items from active orders or cancelled orders (not completed orders)
+  const canCancelItems = !order.isCompleted
   return (
     <Card key={order.id} className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -185,10 +189,22 @@ function OrderCard({
         {/* Order Items */}
         <div className="space-y-2 mb-4">
           {order.items.map((item, index) => (
-            <div key={index} className="flex justify-between items-center py-1">
-              <div className="flex-1">
+            <div key={index} className="flex justify-between items-center py-1 group">
+              <div className="flex-1 flex items-center gap-2">
                 <span className="font-medium">{item.name}</span>
-                <span className="text-muted-foreground ml-2">×{item.quantity}</span>
+                <span className="text-muted-foreground">×{item.quantity}</span>
+                {canCancelItems && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onRemoveItem(order.id, index)}
+                    disabled={isUpdating}
+                    title="Cancel item"
+                  >
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
               </div>
               <span className="font-medium">{formatCurrency(item.subtotal, currencySymbol)}</span>
             </div>
@@ -445,6 +461,101 @@ export default function OrdersPage() {
       console.error('Error uncancelling order:', err)
       setError('Failed to uncancel order.')
       // Revert local changes on error
+      await loadOrders()
+    } finally {
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        return newSet
+      })
+    }
+  }
+
+  const handleRemoveItem = async (orderId: string, itemIndex: number) => {
+    if (!restaurant) return
+
+    try {
+      setUpdatingOrders(prev => new Set(prev).add(orderId))
+      
+      // Find the order and item
+      const order = orders.find(o => o.id === orderId)
+      if (!order || itemIndex < 0 || itemIndex >= order.items.length) {
+        throw new Error('Order or item not found')
+      }
+
+      const itemToUpdate = order.items[itemIndex]
+      
+      // Calculate updated items locally
+      let updatedItems: typeof order.items
+      if (itemToUpdate.quantity > 1) {
+        // Decrease quantity by 1 and recalculate subtotal
+        const newQuantity = itemToUpdate.quantity - 1
+        const pricePerUnit = itemToUpdate.subtotal / itemToUpdate.quantity
+        const newSubtotal = pricePerUnit * newQuantity
+        
+        updatedItems = order.items.map((item, index) => 
+          index === itemIndex
+            ? { ...item, quantity: newQuantity, subtotal: newSubtotal }
+            : item
+        )
+      } else {
+        // Remove the item completely
+        updatedItems = order.items.filter((_, index) => index !== itemIndex)
+      }
+      
+      // Recalculate order totals locally
+      const newSubtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0)
+      const originalSubtotal = order.summary.subtotal || 0
+      const taxRate = originalSubtotal > 0 ? order.summary.tax / originalSubtotal : 0
+      const newTax = newSubtotal * taxRate
+      const newTotal = newSubtotal + newTax
+      const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+      
+      // Update order locally immediately for instant UI feedback
+      setOrders(prevOrders => 
+        prevOrders.map(o => {
+          if (o.id === orderId) {
+            // If no items remain, cancel the order
+            if (updatedItems.length === 0) {
+              return {
+                ...o,
+                items: updatedItems,
+                summary: {
+                  subtotal: 0,
+                  tax: 0,
+                  total: 0,
+                  itemCount: 0
+                },
+                isCancelled: true,
+                cancelledBy: 'restaurant' as const
+              }
+            }
+            return {
+              ...o,
+              items: updatedItems,
+              summary: {
+                subtotal: newSubtotal,
+                tax: newTax,
+                total: newTotal,
+                itemCount: newItemCount
+              }
+            }
+          }
+          return o
+        })
+      )
+      
+      // Sync with server in background
+      await removeItemFromOrder(restaurant.id, orderId, itemIndex)
+      
+      // Refresh from server to ensure consistency (but UI already updated)
+      loadOrders().catch(err => {
+        console.error('Error refreshing orders after item removal:', err)
+      })
+    } catch (err) {
+      console.error('Error removing item from order:', err)
+      setError('Failed to remove item from order.')
+      // Revert on error by refreshing from server
       await loadOrders()
     } finally {
       setUpdatingOrders(prev => {
@@ -869,6 +980,7 @@ export default function OrdersPage() {
                                 onMarkAsActive={handleMarkAsActive}
                                 onCancelOrder={openCancelDialog}
                                 onUncancelOrder={handleUncancelOrder}
+                                onRemoveItem={handleRemoveItem}
                                 getTimeAgo={getTimeAgo}
                                 currencySymbol={currencySymbol}
                               />
@@ -913,6 +1025,7 @@ export default function OrdersPage() {
                         onMarkAsActive={handleMarkAsActive}
                         onCancelOrder={openCancelDialog}
                         onUncancelOrder={handleUncancelOrder}
+                        onRemoveItem={handleRemoveItem}
                         getTimeAgo={getTimeAgo}
                         currencySymbol={currencySymbol}
                       />
