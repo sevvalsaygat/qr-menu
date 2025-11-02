@@ -136,12 +136,33 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
             shouldPlayNotification = true
           }
           
-          // Check for updated orders (existing orders with different content)
+          // Check for updated orders - only notify if items were ADDED, not removed
           const updatedOrders = orders.filter(order => {
             if (!previousOrderIdsRef.current.has(order.id)) return false // Skip new orders
             const previousContent = previousOrderContentsRef.current.get(order.id)
             const currentContent = currentOrderContents.get(order.id)
-            return previousContent !== currentContent
+            
+            if (previousContent === currentContent) return false
+            
+            try {
+              const prevData = previousContent ? JSON.parse(previousContent) : null
+              const currData = currentContent ? JSON.parse(currentContent) : null
+              
+              if (!prevData || !currData) return false
+              
+              const prevItemCount = prevData.summary?.itemCount || 0
+              const currItemCount = currData.summary?.itemCount || 0
+              
+              const prevTotalQuantity = prevData.items?.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0) || 0
+              const currTotalQuantity = currData.items?.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0) || 0
+              
+              const itemCountIncreased = currItemCount > prevItemCount
+              const totalQuantityIncreased = currTotalQuantity > prevTotalQuantity
+              
+              return itemCountIncreased && totalQuantityIncreased
+            } catch {
+              return false
+            }
           })
           
           if (updatedOrders.length > 0) {
