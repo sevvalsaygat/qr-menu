@@ -114,7 +114,7 @@ export const resetPassword = async (email: string): Promise<ApiResponse> => {
     
     // Configure action code settings for password reset email
     const actionCodeSettings = {
-      url: `${baseUrl}/auth/reset-password`,
+      url: 'http://localhost:3000/auth',
       handleCodeInApp: false
     }
 
