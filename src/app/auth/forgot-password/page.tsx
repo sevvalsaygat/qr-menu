@@ -54,7 +54,6 @@ export default function ForgotPasswordPage() {
       }
 
       // Send password reset email using Firebase Authentication
-      console.log('Attempting to send password reset email to:', trimmedEmail)
       const resetResult = await resetPassword(trimmedEmail)
       
       if (!resetResult.success) {
@@ -63,7 +62,6 @@ export default function ForgotPasswordPage() {
         return
       }
 
-      console.log('Password reset email sent successfully')
       setSuccess(true)
     } catch (error) {
       console.error('Unexpected error during password reset:', error)

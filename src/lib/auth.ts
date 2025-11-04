@@ -117,16 +117,9 @@ export const resetPassword = async (email: string): Promise<ApiResponse> => {
       url: 'http://localhost:3000/auth',
       handleCodeInApp: false
     }
-
-    console.log('Sending password reset email:', {
-      email,
-      redirectUrl: actionCodeSettings.url,
-      baseUrl
-    })
     
     await sendPasswordResetEmail(auth, email, actionCodeSettings)
     
-    console.log('Password reset email sent successfully to:', email)
     return { success: true }
   } catch (error: unknown) {
     console.error('Error sending password reset email:', error)
