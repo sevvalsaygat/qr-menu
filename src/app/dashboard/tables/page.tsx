@@ -35,8 +35,7 @@ import {
 import { Switch } from '../../../components/ui/switch'
 import { Textarea } from '../../../components/ui/textarea'
 import { Plus, MoreHorizontal, Edit, Trash2, QrCode, Download, Loader2 } from 'lucide-react'
-import QRCode from 'qrcode'
-import Image from 'next/image'
+import { QRCodeWithDownload } from '../../../components/qr-code/QRCodeWithDownload'
 
 export default function TablesPage() {
   const { user } = useAuth()
@@ -53,7 +52,7 @@ export default function TablesPage() {
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedTable, setSelectedTable] = useState<Table | null>(null)
-  const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [menuUrl, setMenuUrl] = useState('')
 
   // Form data
   const [formData, setFormData] = useState({
@@ -207,33 +206,16 @@ export default function TablesPage() {
     }
   }
 
-  const generateQRCode = async (table: Table) => {
+  const generateQRCode = (table: Table) => {
     try {
-      const menuUrl = `${window.location.origin}/menu/${restaurantId}/${table.id}`
-      const qrCodeDataUrl = await QRCode.toDataURL(menuUrl, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      })
-      setQrCodeUrl(qrCodeDataUrl)
+      const url = `${window.location.origin}/menu/${restaurantId}/${table.id}`
+      setMenuUrl(url)
       setSelectedTable(table)
       setIsQRDialogOpen(true)
     } catch (err) {
       setError('Failed to generate QR code')
       console.error(err)
     }
-  }
-
-  const downloadQRCode = () => {
-    if (!qrCodeUrl || !selectedTable) return
-    
-    const link = document.createElement('a')
-    link.download = `table-${selectedTable.name}-qr.png`
-    link.href = qrCodeUrl
-    link.click()
   }
 
   const openEditDialog = (table: Table) => {
@@ -567,31 +549,25 @@ export default function TablesPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex flex-col items-center space-y-4 w-full overflow-hidden">
-            {qrCodeUrl && (
-              <Image 
-                src={qrCodeUrl} 
-                alt="QR Code" 
-                width={300}
-                height={300}
-                className="border rounded-lg"
+          <div className="flex flex-col items-center space-y-4 w-full">
+            {menuUrl && selectedTable && (
+              <QRCodeWithDownload
+                value={menuUrl}
+                filename={`table-${selectedTable.name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-qr`}
+                size={300}
+                bgColor="#FFFFFF"
+                fgColor="#000000"
+                level="M"
               />
             )}
             
             <div className="text-center text-sm text-gray-600 w-full">
               <p className="mb-2">Menu URL:</p>
               <code className="bg-gray-100 px-2 py-1 rounded text-xs break-all block w-full max-w-full overflow-wrap-anywhere">
-                {window.location.origin}/menu/{restaurantId}/{selectedTable?.id}
+                {menuUrl}
               </code>
             </div>
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={downloadQRCode}>
-              <Download className="h-4 w-4 mr-2" />
-              Download QR Code
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
