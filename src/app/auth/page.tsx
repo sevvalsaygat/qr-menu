@@ -310,6 +310,19 @@ export default function AuthPage() {
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSignUp ? 'Create Account' : 'Sign In'}
             </Button>
+
+            {!isSignUp && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => router.push('/auth/forgot-password')}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  disabled={submitting}
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
           </form>
 
           <div className="mt-6 text-center">

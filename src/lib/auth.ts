@@ -99,13 +99,50 @@ export const logOut = async (): Promise<ApiResponse> => {
 // Reset password
 export const resetPassword = async (email: string): Promise<ApiResponse> => {
   try {
-    await sendPasswordResetEmail(auth, email)
+    // Validate email format
+    if (!email || !email.includes('@')) {
+      return {
+        success: false,
+        error: 'Please enter a valid email address'
+      }
+    }
+
+    // Get the base URL for password reset redirect
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+    
+    // Configure action code settings for password reset email
+    const actionCodeSettings = {
+      url: `${baseUrl}/auth/reset-password`,
+      handleCodeInApp: false
+    }
+
+    console.log('Sending password reset email:', {
+      email,
+      redirectUrl: actionCodeSettings.url,
+      baseUrl
+    })
+    
+    await sendPasswordResetEmail(auth, email, actionCodeSettings)
+    
+    console.log('Password reset email sent successfully to:', email)
     return { success: true }
   } catch (error: unknown) {
-    const firebaseError = error as { code?: string }
+    console.error('Error sending password reset email:', error)
+    const firebaseError = error as { code?: string; message?: string }
+    const errorCode = firebaseError.code || 'unknown'
+    const errorMessage = getAuthErrorMessage(errorCode)
+    
+    console.error('Firebase error details:', {
+      code: errorCode,
+      message: firebaseError.message,
+      userMessage: errorMessage
+    })
+    
     return { 
       success: false, 
-      error: getAuthErrorMessage(firebaseError.code || 'unknown') 
+      error: errorMessage
     }
   }
 }
@@ -142,9 +179,9 @@ const getAuthErrorMessage = (errorCode: string): string => {
     case 'auth/wrong-password':
       return 'Incorrect password'
     case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please try again later'
+      return 'Too many requests. Please try again later'
     case 'auth/network-request-failed':
-      return 'Network error. Please check your connection'
+      return 'Network error. Please check your internet connection'
     case 'auth/invalid-credential':
       return 'Invalid email or password'
     default:
