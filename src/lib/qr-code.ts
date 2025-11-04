@@ -1,34 +1,11 @@
-import QRCode from 'qrcode'
+// Note: QR code generation is now handled by react-qr-code components
+// This utility file provides helper functions for URL generation
 
 export interface QRCodeOptions {
-  width?: number
-  margin?: number
-  color?: {
-    dark?: string
-    light?: string
-  }
-}
-
-export const generateQRCode = async (
-  text: string,
-  options: QRCodeOptions = {}
-): Promise<string> => {
-  try {
-    const defaultOptions = {
-      width: 300,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      },
-      ...options
-    }
-
-    return await QRCode.toDataURL(text, defaultOptions)
-  } catch (error) {
-    console.error('Error generating QR code:', error)
-    throw new Error('Failed to generate QR code')
-  }
+  size?: number
+  bgColor?: string
+  fgColor?: string
+  level?: 'L' | 'M' | 'Q' | 'H'
 }
 
 export const generateTableMenuUrl = (
@@ -40,6 +17,8 @@ export const generateTableMenuUrl = (
   return `${base}/menu/${restaurantId}/${tableId}`
 }
 
+// Download functionality is now handled by QRCodeWithDownload component
+// This function is kept for backward compatibility but is deprecated
 export const downloadQRCode = (
   dataUrl: string,
   filename: string = 'qr-code.png'
@@ -54,18 +33,17 @@ export const downloadQRCode = (
   document.body.removeChild(link)
 }
 
-export const generateTableQRCode = async (
+// Generate table menu URL helper
+export const generateTableQRCode = (
   restaurantId: string,
   tableId: string,
   tableName: string,
-  options?: QRCodeOptions
-): Promise<{ qrCodeUrl: string; menuUrl: string; filename: string }> => {
-  const menuUrl = generateTableMenuUrl(restaurantId, tableId)
-  const qrCodeUrl = await generateQRCode(menuUrl, options)
+  baseUrl?: string
+): { menuUrl: string; filename: string } => {
+  const menuUrl = generateTableMenuUrl(restaurantId, tableId, baseUrl)
   const filename = `table-${tableName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}-qr.png`
   
   return {
-    qrCodeUrl,
     menuUrl,
     filename
   }
