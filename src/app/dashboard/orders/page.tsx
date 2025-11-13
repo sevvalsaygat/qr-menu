@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrderDisplay } from '@/contexts/OrderDisplayContext'
 import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder, removeItemFromOrder } from '@/lib/firestore'
@@ -31,7 +32,8 @@ import {
   Calendar,
   CalendarDays,
   Search,
-  X
+  X,
+  Plus
 } from 'lucide-react'
 import { 
   groupOrdersByDate, 
@@ -83,6 +85,7 @@ interface OrderCardProps {
   onCancelOrder: (orderId: string) => void
   onUncancelOrder: (orderId: string) => void
   onRemoveItem: (orderId: string, itemIndex: number) => void
+  onAddProducts: (order: Order) => void
   getTimeAgo: (timestamp: Timestamp | FieldValue | null | undefined) => string
   currencySymbol: '₺' | '$' | '€'
 }
@@ -95,6 +98,7 @@ function OrderCard({
   onCancelOrder, 
   onUncancelOrder,
   onRemoveItem,
+  onAddProducts,
   getTimeAgo,
   currencySymbol
 }: OrderCardProps) {
@@ -163,6 +167,15 @@ function OrderCard({
               </Button>
             ) : (
               <div className="flex space-x-2">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => onAddProducts(order)}
+                  disabled={isUpdating}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Product
+                </Button>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -239,6 +252,7 @@ function OrderCard({
 }
 
 export default function OrdersPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const { showCanceledOrders } = useOrderDisplay()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
@@ -564,6 +578,13 @@ export default function OrdersPage() {
         return newSet
       })
     }
+  }
+
+  const openAddProductsDialog = (order: Order) => {
+    if (!restaurant) return
+    
+    // Navigate to the restaurant menu page for the table associated with the order
+    router.push(`/menu/${restaurant.id}/${order.tableId}`)
   }
 
   useEffect(() => {
@@ -981,6 +1002,7 @@ export default function OrdersPage() {
                                 onCancelOrder={openCancelDialog}
                                 onUncancelOrder={handleUncancelOrder}
                                 onRemoveItem={handleRemoveItem}
+                                onAddProducts={openAddProductsDialog}
                                 getTimeAgo={getTimeAgo}
                                 currencySymbol={currencySymbol}
                               />
@@ -1026,6 +1048,7 @@ export default function OrdersPage() {
                         onCancelOrder={openCancelDialog}
                         onUncancelOrder={handleUncancelOrder}
                         onRemoveItem={handleRemoveItem}
+                        onAddProducts={openAddProductsDialog}
                         getTimeAgo={getTimeAgo}
                         currencySymbol={currencySymbol}
                       />
@@ -1062,6 +1085,7 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }
