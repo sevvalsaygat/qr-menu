@@ -283,6 +283,21 @@ export default function RestaurantEditPage() {
             />
           </div>
 
+          {/* Manual Order Adjustments (Coming Soon) */}
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">
+                Manual Order Adjustments
+              </Label>
+              <p className="text-xs text-gray-500">
+                Control whether staff can manually add products or adjust quantities in active orders
+              </p>
+            </div>
+            <Button variant="outline" disabled>
+              Coming Soon
+            </Button>
+          </div>
+
           {/* Save Button */}
           <div className="flex space-x-4">
             <Button
