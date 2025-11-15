@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrderDisplay } from '@/contexts/OrderDisplayContext'
-import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder, removeItemFromOrder } from '@/lib/firestore'
+import { getUserRestaurants, getOrders, markOrderAsCompleted, markOrderAsActive, cancelOrder, uncancelOrder, removeItemFromOrder, increaseItemQuantity } from '@/lib/firestore'
 import { Restaurant, Order } from '@/types'
 import { Timestamp, FieldValue, onSnapshot, collection, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -31,7 +32,8 @@ import {
   Calendar,
   CalendarDays,
   Search,
-  X
+  X,
+  Plus
 } from 'lucide-react'
 import { 
   groupOrdersByDate, 
@@ -83,6 +85,8 @@ interface OrderCardProps {
   onCancelOrder: (orderId: string) => void
   onUncancelOrder: (orderId: string) => void
   onRemoveItem: (orderId: string, itemIndex: number) => void
+  onIncreaseQuantity: (orderId: string, itemIndex: number) => void
+  onAddProducts: (order: Order) => void
   getTimeAgo: (timestamp: Timestamp | FieldValue | null | undefined) => string
   currencySymbol: '₺' | '$' | '€'
 }
@@ -95,6 +99,8 @@ function OrderCard({
   onCancelOrder, 
   onUncancelOrder,
   onRemoveItem,
+  onIncreaseQuantity,
+  onAddProducts,
   getTimeAgo,
   currencySymbol
 }: OrderCardProps) {
@@ -166,6 +172,16 @@ function OrderCard({
                 <Button 
                   variant="outline" 
                   size="sm" 
+                  onClick={() => onAddProducts(order)}
+                  disabled={isUpdating}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Product
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
                   onClick={() => onMarkAsCompleted(order.id)}
                   disabled={isUpdating}
                 >
@@ -194,16 +210,28 @@ function OrderCard({
                 <span className="font-medium">{item.name}</span>
                 <span className="text-muted-foreground">×{item.quantity}</span>
                 {canCancelItems && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => onRemoveItem(order.id, index)}
-                    disabled={isUpdating}
-                    title="Cancel item"
-                  >
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  </Button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => onIncreaseQuantity(order.id, index)}
+                      disabled={isUpdating}
+                      title="Increase quantity"
+                    >
+                      <Plus className="h-4 w-4 text-green-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => onRemoveItem(order.id, index)}
+                      disabled={isUpdating}
+                      title="Remove item"
+                    >
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 )}
               </div>
               <span className="font-medium">{formatCurrency(item.subtotal, currencySymbol)}</span>
@@ -239,6 +267,7 @@ function OrderCard({
 }
 
 export default function OrdersPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const { showCanceledOrders } = useOrderDisplay()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
@@ -564,6 +593,78 @@ export default function OrdersPage() {
         return newSet
       })
     }
+  }
+
+  const handleIncreaseQuantity = async (orderId: string, itemIndex: number) => {
+    if (!restaurant) return
+
+    try {
+      setUpdatingOrders(prev => new Set(prev).add(orderId))
+
+      const order = orders.find(o => o.id === orderId)
+      if (!order || itemIndex < 0 || itemIndex >= order.items.length) {
+        throw new Error('Order or item not found')
+      }
+
+      const itemToUpdate = order.items[itemIndex]
+      const newQuantity = itemToUpdate.quantity + 1
+      const unitPrice = itemToUpdate.price ?? (itemToUpdate.quantity > 0 ? itemToUpdate.subtotal / itemToUpdate.quantity : 0)
+      const newItemSubtotal = unitPrice * newQuantity
+
+      const updatedItems = order.items.map((item, index) =>
+        index === itemIndex
+          ? { ...item, quantity: newQuantity, subtotal: newItemSubtotal }
+          : item
+      )
+
+      const newSubtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0)
+      const originalSubtotal = order.summary.subtotal || 0
+      const taxRate = originalSubtotal > 0 ? order.summary.tax / originalSubtotal : 0
+      const newTax = newSubtotal * taxRate
+      const newTotal = newSubtotal + newTax
+      const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+
+      setOrders(prevOrders =>
+        prevOrders.map(o => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              items: updatedItems,
+              summary: {
+                subtotal: newSubtotal,
+                tax: newTax,
+                total: newTotal,
+                itemCount: newItemCount
+              }
+            }
+          }
+          return o
+        })
+      )
+
+      await increaseItemQuantity(restaurant.id, orderId, itemIndex)
+
+      loadOrders().catch(err => {
+        console.error('Error refreshing orders after quantity increase:', err)
+      })
+    } catch (err) {
+      console.error('Error increasing item quantity:', err)
+      setError('Failed to increase item quantity.')
+      await loadOrders()
+    } finally {
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(orderId)
+        return newSet
+      })
+    }
+  }
+
+  const openAddProductsDialog = (order: Order) => {
+    if (!restaurant) return
+    
+    // Navigate to the restaurant menu page for the table associated with the order
+    router.push(`/menu/${restaurant.id}/${order.tableId}`)
   }
 
   useEffect(() => {
@@ -981,6 +1082,8 @@ export default function OrdersPage() {
                                 onCancelOrder={openCancelDialog}
                                 onUncancelOrder={handleUncancelOrder}
                                 onRemoveItem={handleRemoveItem}
+                                onIncreaseQuantity={handleIncreaseQuantity}
+                                onAddProducts={openAddProductsDialog}
                                 getTimeAgo={getTimeAgo}
                                 currencySymbol={currencySymbol}
                               />
@@ -1026,6 +1129,8 @@ export default function OrdersPage() {
                         onCancelOrder={openCancelDialog}
                         onUncancelOrder={handleUncancelOrder}
                         onRemoveItem={handleRemoveItem}
+                        onIncreaseQuantity={handleIncreaseQuantity}
+                        onAddProducts={openAddProductsDialog}
                         getTimeAgo={getTimeAgo}
                         currencySymbol={currencySymbol}
                       />
@@ -1062,6 +1167,7 @@ export default function OrdersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }

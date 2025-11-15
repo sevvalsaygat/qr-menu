@@ -12,7 +12,8 @@ import {
   limit,
   serverTimestamp,
   writeBatch,
-  runTransaction
+  runTransaction,
+  deleteField
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { 
@@ -664,6 +665,166 @@ export const removeItemFromOrder = async (
   } catch (error) {
     console.error('Error removing item from order:', error)
     throw new Error('Failed to remove item from order')
+  }
+}
+
+export const increaseItemQuantity = async (
+  restaurantId: string,
+  orderId: string,
+  itemIndex: number
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    const orderDoc = await getDoc(orderRef)
+    
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found')
+    }
+    
+    const orderData = orderDoc.data() as Order
+    const currentItems = orderData.items || []
+    
+    // Check if item index is valid
+    if (itemIndex < 0 || itemIndex >= currentItems.length) {
+      throw new Error('Invalid item index')
+    }
+    
+    const itemToUpdate = currentItems[itemIndex]
+    
+    // Increase quantity by 1 and recalculate subtotal
+    const newQuantity = itemToUpdate.quantity + 1
+    const unitPrice = itemToUpdate.price ?? (itemToUpdate.quantity > 0 ? itemToUpdate.subtotal / itemToUpdate.quantity : 0)
+    const newItemSubtotal = unitPrice * newQuantity
+    
+    const updatedItems = currentItems.map((item, index) => 
+      index === itemIndex
+        ? { ...item, quantity: newQuantity, subtotal: newItemSubtotal }
+        : item
+    )
+    
+    // Recalculate order totals
+    const newSubtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0)
+    // Calculate tax rate from original order, or default to 0 if no subtotal
+    const originalSubtotal = orderData.summary.subtotal || 0
+    const taxRate = originalSubtotal > 0 ? orderData.summary.tax / originalSubtotal : 0
+    const newTax = newSubtotal * taxRate
+    const newTotal = newSubtotal + newTax
+    const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+    
+    // Update the order with new totals
+    await updateDoc(orderRef, {
+      items: updatedItems,
+      summary: {
+        subtotal: newSubtotal,
+        tax: newTax,
+        total: newTotal,
+        itemCount: newItemCount
+      }
+    })
+  } catch (error) {
+    console.error('Error increasing item quantity:', error)
+    throw new Error('Failed to increase item quantity')
+  }
+}
+
+// Add products to an existing order
+export const addProductsToOrder = async (
+  restaurantId: string,
+  orderId: string,
+  itemsToAdd: Array<{
+    productId: string
+    name: string
+    price: number
+    quantity: number
+    subtotal: number
+  }>
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    const orderDoc = await getDoc(orderRef)
+    
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found')
+    }
+    
+    const orderData = orderDoc.data() as Order
+    const currentItems = orderData.items || []
+    
+    // Merge new items with existing items by productId
+    const itemMap = new Map<string, typeof itemsToAdd[0] & { quantity: number; subtotal: number }>()
+    
+    // Add existing items to map
+    currentItems.forEach(item => {
+      itemMap.set(item.productId, {
+        productId: item.productId,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        subtotal: item.subtotal
+      })
+    })
+    
+    // Merge new items (add quantities if product already exists)
+    itemsToAdd.forEach(newItem => {
+      const existing = itemMap.get(newItem.productId)
+      if (existing) {
+        // Product already in order, add quantities
+        const newQuantity = existing.quantity + newItem.quantity
+        const newSubtotal = newItem.price * newQuantity // Use latest price
+        itemMap.set(newItem.productId, {
+          ...existing,
+          price: newItem.price, // Update to latest price
+          quantity: newQuantity,
+          subtotal: newSubtotal
+        })
+      } else {
+        // New product, add it
+        itemMap.set(newItem.productId, {
+          productId: newItem.productId,
+          name: newItem.name,
+          price: newItem.price,
+          quantity: newItem.quantity,
+          subtotal: newItem.subtotal
+        })
+      }
+    })
+    
+    // Convert map back to array
+    const mergedItems = Array.from(itemMap.values())
+    
+    // Recalculate order totals
+    const newSubtotal = mergedItems.reduce((sum, item) => sum + item.subtotal, 0)
+    // Calculate tax rate from original order, or default to 0 if no subtotal
+    const originalSubtotal = orderData.summary.subtotal || 0
+    const taxRate = originalSubtotal > 0 ? orderData.summary.tax / originalSubtotal : 0
+    const newTax = newSubtotal * taxRate
+    const newTotal = newSubtotal + newTax
+    const newItemCount = mergedItems.reduce((sum, item) => sum + item.quantity, 0)
+    
+    // Prepare update payload
+    const updatePayload: Record<string, unknown> = {
+      items: mergedItems,
+      summary: {
+        subtotal: newSubtotal,
+        tax: newTax,
+        total: newTotal,
+        itemCount: newItemCount
+      }
+    }
+    
+    // If order was completed or cancelled, reactivate it
+    if (orderData.isCompleted || orderData.isCancelled) {
+      updatePayload.isCompleted = false
+      updatePayload.isCancelled = false
+      updatePayload.cancelledAt = deleteField()
+      updatePayload.cancelledBy = deleteField()
+    }
+    
+    // Update the order
+    await updateDoc(orderRef, updatePayload)
+  } catch (error) {
+    console.error('Error adding products to order:', error)
+    throw new Error('Failed to add products to order')
   }
 }
 

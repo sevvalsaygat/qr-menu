@@ -34,7 +34,6 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
   const previousOrderCountRef = useRef<number>(0)
   const hasInitializedRef = useRef<boolean>(false)
   const previousOrderIdsRef = useRef<Set<string>>(new Set())
-  const previousOrderContentsRef = useRef<Map<string, string>>(new Map())
 
   // Helper function to convert Firestore document to Order
   const docToOrder = (doc: DocumentSnapshot): Order => {
@@ -110,66 +109,13 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
         // Check if new orders have arrived or existing orders have been updated
         const currentOrderCount = orders.length
         const currentOrderIds = new Set(orders.map(order => order.id))
-        const currentOrderContents = new Map<string, string>()
-        
-        // Create content signatures for each order to detect changes
-        orders.forEach(order => {
-          const contentSignature = JSON.stringify({
-            items: order.items,
-            summary: order.summary,
-            specialInstructions: order.specialInstructions
-          })
-          currentOrderContents.set(order.id, contentSignature)
-        })
-        
         // Mark as initialized after first load
         if (!hasInitializedRef.current) {
           hasInitializedRef.current = true
           previousOrderIdsRef.current = currentOrderIds
-          previousOrderContentsRef.current = currentOrderContents
         } else {
-          let shouldPlayNotification = false
-          
-          // Check for new orders (orders with IDs not in previous set)
           const newOrders = orders.filter(order => !previousOrderIdsRef.current.has(order.id))
           if (newOrders.length > 0) {
-            shouldPlayNotification = true
-          }
-          
-          // Check for updated orders - only notify if items were ADDED, not removed
-          const updatedOrders = orders.filter(order => {
-            if (!previousOrderIdsRef.current.has(order.id)) return false // Skip new orders
-            const previousContent = previousOrderContentsRef.current.get(order.id)
-            const currentContent = currentOrderContents.get(order.id)
-            
-            if (previousContent === currentContent) return false
-            
-            try {
-              const prevData = previousContent ? JSON.parse(previousContent) : null
-              const currData = currentContent ? JSON.parse(currentContent) : null
-              
-              if (!prevData || !currData) return false
-              
-              const prevItemCount = prevData.summary?.itemCount || 0
-              const currItemCount = currData.summary?.itemCount || 0
-              
-              const prevTotalQuantity = prevData.items?.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0) || 0
-              const currTotalQuantity = currData.items?.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0) || 0
-              
-              const itemCountIncreased = currItemCount > prevItemCount
-              const totalQuantityIncreased = currTotalQuantity > prevTotalQuantity
-              
-              return itemCountIncreased && totalQuantityIncreased
-            } catch {
-              return false
-            }
-          })
-          
-          if (updatedOrders.length > 0) {
-            shouldPlayNotification = true
-          }
-          
-          if (shouldPlayNotification) {
             playNewOrderSound()
           }
         }
@@ -177,7 +123,6 @@ export function OrderNotificationProvider({ children }: { children: React.ReactN
         // Update tracking references
         previousOrderCountRef.current = currentOrderCount
         previousOrderIdsRef.current = currentOrderIds
-        previousOrderContentsRef.current = currentOrderContents
         
         setIsLoading(false)
         setError(null)
