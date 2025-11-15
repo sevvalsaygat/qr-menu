@@ -668,6 +668,65 @@ export const removeItemFromOrder = async (
   }
 }
 
+export const increaseItemQuantity = async (
+  restaurantId: string,
+  orderId: string,
+  itemIndex: number
+): Promise<void> => {
+  try {
+    const orderRef = doc(db, 'restaurants', restaurantId, 'orders', orderId)
+    const orderDoc = await getDoc(orderRef)
+    
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found')
+    }
+    
+    const orderData = orderDoc.data() as Order
+    const currentItems = orderData.items || []
+    
+    // Check if item index is valid
+    if (itemIndex < 0 || itemIndex >= currentItems.length) {
+      throw new Error('Invalid item index')
+    }
+    
+    const itemToUpdate = currentItems[itemIndex]
+    
+    // Increase quantity by 1 and recalculate subtotal
+    const newQuantity = itemToUpdate.quantity + 1
+    const unitPrice = itemToUpdate.price ?? (itemToUpdate.quantity > 0 ? itemToUpdate.subtotal / itemToUpdate.quantity : 0)
+    const newItemSubtotal = unitPrice * newQuantity
+    
+    const updatedItems = currentItems.map((item, index) => 
+      index === itemIndex
+        ? { ...item, quantity: newQuantity, subtotal: newItemSubtotal }
+        : item
+    )
+    
+    // Recalculate order totals
+    const newSubtotal = updatedItems.reduce((sum, item) => sum + item.subtotal, 0)
+    // Calculate tax rate from original order, or default to 0 if no subtotal
+    const originalSubtotal = orderData.summary.subtotal || 0
+    const taxRate = originalSubtotal > 0 ? orderData.summary.tax / originalSubtotal : 0
+    const newTax = newSubtotal * taxRate
+    const newTotal = newSubtotal + newTax
+    const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+    
+    // Update the order with new totals
+    await updateDoc(orderRef, {
+      items: updatedItems,
+      summary: {
+        subtotal: newSubtotal,
+        tax: newTax,
+        total: newTotal,
+        itemCount: newItemCount
+      }
+    })
+  } catch (error) {
+    console.error('Error increasing item quantity:', error)
+    throw new Error('Failed to increase item quantity')
+  }
+}
+
 // Add products to an existing order
 export const addProductsToOrder = async (
   restaurantId: string,
