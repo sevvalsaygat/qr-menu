@@ -170,12 +170,13 @@ function OrderCard({
             ) : (
               <div className="flex space-x-2">
                 <Button 
-                  variant="secondary" 
+                  variant="outline" 
                   size="sm" 
                   onClick={() => onAddProducts(order)}
                   disabled={isUpdating}
+                  className="gap-1.5"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4" />
                   Add Product
                 </Button>
                 <Button 
